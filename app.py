@@ -357,7 +357,7 @@ with brand_copy:
     st.markdown('<div class="brand-kicker">Your everyday AI sidekick</div>', unsafe_allow_html=True)
     st.markdown('<h1 class="brand-title">dharshan’s lil buddy</em></h1>', unsafe_allow_html=True)
 st.markdown(
-    '<p class="brand-subtitle">wsp </p>',
+    '<p class="brand-subtitle">Ask anything, work through an idea, or attach an image for a closer look. </p>',
     unsafe_allow_html=True,
 )
 
@@ -370,7 +370,7 @@ client = get_client(api_key)
 
 if not st.session_state.messages:
     st.markdown(
-        '<div class="welcome-card"><strong>Hey! I’m ready when you are.</strong><br>Try “Help me make a plan for today,” “Explain this homework problem,” or upload an image and ask what you’d like to know about it.</div>',
+        '<div class="welcome-card"><strong>wsp</strong><br>how u doin</div>',
         unsafe_allow_html=True,
     )
 
