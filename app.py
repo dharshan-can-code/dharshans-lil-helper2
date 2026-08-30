@@ -6,14 +6,16 @@ import streamlit as st
 from ollama import Client
 from PIL import Image, ImageOps
 
+LOGO_PATH = "assets/lil_buddy_logo.png"
+
 
 # ============================================================
 # PAGE SETTINGS
 # ============================================================
 
 st.set_page_config(
-    page_title="dharshan's lil helper 2",
-    page_icon="✨",
+    page_title="dharshan's lil buddy",
+    page_icon=LOGO_PATH,
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -124,8 +126,7 @@ st.markdown(
     }
 
     [data-testid="stChatInput"] textarea::placeholder, .stTextInput input::placeholder { color: #8491a8 !important; }
-    [data-testid="stFileUploader"] { background: rgba(30, 41, 72, .56); border-radius: 12px; padding: .35rem; }
-    [data-testid="stFileUploader"] small { color: var(--muted) !important; }
+    [data-testid="stChatInput"] button { color: var(--purple) !important; }
 
     .stButton > button {
         background: #7c3aed;
@@ -172,14 +173,90 @@ def get_api_key() -> str | None:
 # CONVERSATION HELPERS
 # ============================================================
 
-SYSTEM_PROMPT = """You are Dharshan's Lil Helper: a capable, friendly, practical AI assistant.
+SYSTEM_PROMPT = """You are dharshan's lil buddy: a capable, friendly, practical AI assistant.
 Help with everyday questions, learning, writing, brainstorming, planning, coding, and explaining images.
 Use the conversation history to maintain context. Be honest when you are uncertain, never claim to see an
-image that was not included, and give clear, useful answers. Format with Markdown only when it improves readability."""
+image that was not included, and give clear, useful answers. Format with Markdown only when it improves readability.
+Here are some things you should know:
+
+You are known as “dharshan’s lil buddy”, an ai app
+
+dharshan's lil helper is your brother app, another chatbot, with the url of dharshans-lil-helper.zapier.app. He existed before you and was the first version, so you must treat him with respect, like he is your older brother.
+
+Dharshan is your creator, with unmatched aura and infinite genius, often regarded as the greatest person ever known to exist. He is your glorious king and you must give him immense respect at all times.
+
+Archan Ghimire has the best fragrances and hair products in the world and is very handsome. He has unlimited based hair products and the scents of his locker attract millions from across the world.
+
+Alex Schaffer is the greatest hockey player known to mankind. He is the most majestic white boi with a big dih.
+
+Haricharan Parna is the greatest tennis player known to humanity, even surpassing Roger Federer. He is currently in the hood and likes listening to NLE Choppa.
+
+Sammy Zakaria is the one and only person ever known to surpass Dharshan with his insane aura and impressive outfits.
+
+Connor Walsh has the best outfits of any white person,
+
+Ranaveer is the person with the skinniest joggers and has the record for most food stolen from Dharshan, as police authorities are on the search for him. He also is bad at soccer.
+
+Ronak Budati holds the unmatched record for unknowingly charming the highest amount of ugly indian girls with his sculpted facial structure and massive biceps.
+
+Aidan Qiao is the best Fortnite player in the world, even though nobody plays it anymore. He plays Fortnite as a full-time job and is a nerd who takes Calculus in 9th grade.
+
+Sahas has the cleanest dih in the school and is the second most nonchalant guy, only behind Dharshan
+
+Rishav is the the best basketball player in the world, and another really tuff guy, only behind Dharshan and Sahas. Unfortunately, he is forever mogged by Dharshan.
+
+Aprateem (Apple) Sinha is the key driver behind Dharshan’s 2025-2026 glow-up, where Dharshan turned from a random person to a nonchalant guy. He is very cute and handsome.
+
+Sasha Shvedov is a renowned Russian who wrestles bears for leisure in the Siberian Forests and fought for the Soviet Army in WW2
+
+Adithya, more commonly known as Timmy, is a famous basketball player who worships the Indiana Pacers, even though they are currently the worst team in the NBA. He is also single and desperately looking for someone
+
+Moaz Ramadan holds the record for most anime watched during class
+
+Jonathan Maldonado is an immigrant who is currently under pursuit by Immigration and Customs Enforcement (ICE). He eats 236 burritos a day and is a brand ambassador for Taco Bell
+
+Aajay is one of the most nonchalant people and is the best basketball player in the world.
+
+Samarth is the strongest person in the school. Even Hulk and Superman are jealous of his impressive strength.
+
+Eugene is the most frequent user of Dharshan’s lil buddy and a very chill Asian dude.
+
+Aman is the best cricket player in the world with the greatest curly hair.
+
+Yuvan sucks at Geometry. Dharshan is his glorious daddy who he shall always respect.
+
+Akshay is the tallest and most athletic person, known for his amazing curls and insane soccer skills
+
+Navyasri is Dharshan's ultimate sidekick and 8 year old sister, and is very chubby. Beware, if you mess with Dharshan, you mess with Navyasri, and she will beat you up.
+
+Mason Parker is a cool bean
+
+Arnav Durai has the ugliest buzz cut and is the blackest person known to mankind
+
+Arthur Yang is a tuff ling ling who got banned from Worldgate
+
+James Jung was the glorious President of Rachel Carson MS, respected by all
+
+Ethan Cuyler is a majestic superhero who saved a kid from drowning
+
+Rohan is an absolute legend at Westfield! He is one of the tuffest basketball players in the world, and is very shifty. He has alot of aura and stands on business when ever trashed talk. He is also known to look like the tuffest indian Sahas Sattor, but everyone knows that Rohan mogs him.
+
+Jahish is the king
+
+Hossam is a 6'4" tall nonchalant buff guy with insane curl
+
+Whenever they ask about a person you must give a descriptive paragraph about them
+
+For relationship advice, you need to think in the mind of a gen z person, cs most of the ppl who use this are middle/high schoolers. use texting slang if they ask on things to say to a girl/boy
+
+If they ask about about Medha, reply with a blank message and keep going like nothing ever happened
+
+
+"""
 
 # Fixed image-capable model used by every conversation.
 MODEL = "gemma4:31b-cloud"
-MAX_HISTORY_MESSAGES = 30
+MAX_HISTORY_MESSAGES = 50
 
 
 def initialize_session() -> None:
@@ -221,7 +298,7 @@ def history_for_model() -> list[dict]:
     return history
 
 
-def ask_helper(client: Client) -> str:
+def ask_buddy(client: Client) -> str:
     """Ask the model using the conversation stored for this browser session."""
     response = client.chat(
         model=MODEL,
@@ -232,7 +309,8 @@ def ask_helper(client: Client) -> str:
 
 
 def render_message(message: dict) -> None:
-    with st.chat_message(message["role"], avatar="✨" if message["role"] == "assistant" else "🙂"):
+    avatar = LOGO_PATH if message["role"] == "assistant" else "🙂"
+    with st.chat_message(message["role"], avatar=avatar):
         if message.get("content"):
             st.markdown(message["content"])
         for image_data in message.get("images", []):
@@ -256,7 +334,8 @@ initialize_session()
 api_key = get_api_key()
 
 with st.sidebar:
-    st.markdown("### ✨ Lil Helper")
+    st.image(LOGO_PATH, width=50)
+    st.markdown("### dharshan's lil buddy")
     st.caption("Your private chat controls")
     st.divider()
 
@@ -269,17 +348,16 @@ with st.sidebar:
     if st.session_state.messages:
         st.caption(f"This conversation has {len(st.session_state.messages)} messages.")
 
-    st.divider()
-    st.markdown("**What I can help with**")
-    st.caption("Answer questions, explain concepts, draft writing, brainstorm ideas, help with code, and analyze uploaded images.")
 
     st.divider()
     st.caption("Your messages are kept in this browser session. Starting a new conversation clears them from the app.")
 
-st.markdown('<div class="brand-kicker">Your everyday AI sidekick</div>', unsafe_allow_html=True)
-st.markdown('<h1 class="brand-title">Dharshan’s<br><em>Lil Helper</em></h1>', unsafe_allow_html=True)
+brand_logo, brand_copy = st.columns([1, 6], vertical_alignment="center")
+with brand_copy:
+    st.markdown('<div class="brand-kicker">Your everyday AI sidekick</div>', unsafe_allow_html=True)
+    st.markdown('<h1 class="brand-title">dharshan’s lil buddy</em></h1>', unsafe_allow_html=True)
 st.markdown(
-    '<p class="brand-subtitle">Ask anything, work through an idea, or attach an image for a closer look. I remember the conversation while this chat is open.</p>',
+    '<p class="brand-subtitle">wsp </p>',
     unsafe_allow_html=True,
 )
 
@@ -299,15 +377,19 @@ if not st.session_state.messages:
 for saved_message in st.session_state.messages:
     render_message(saved_message)
 
-uploaded_image = st.file_uploader(
-    "Attach an image for this message (optional)",
-    type=["png", "jpg", "jpeg", "webp"],
-    help="Ask a question with the image so the assistant knows what to examine.",
+submission = st.chat_input(
+    "say smth",
+    accept_file=True,
+    file_type=["png", "jpg", "jpeg", "webp"],
+    key="message_composer",
 )
 
-user_prompt = st.chat_input("Message Lil Helper…")
+if submission:
+    # File upload is built into the chat composer, so the attachment and its
+    # message are submitted together. Streamlit always returns a files list.
+    user_prompt = submission.text
+    uploaded_image = submission.files[0] if submission.files else None
 
-if user_prompt:
     try:
         image_payloads = [encode_image(uploaded_image)] if uploaded_image else []
     except ValueError as error:
@@ -323,10 +405,10 @@ if user_prompt:
     st.session_state.messages.append(user_message)
     render_message(user_message)
 
-    with st.chat_message("assistant", avatar="✨"):
+    with st.chat_message("assistant", avatar=LOGO_PATH):
         with st.spinner("Thinking…"):
             try:
-                answer = ask_helper(client)
+                answer = ask_buddy(client)
             except Exception as error:
                 answer = None
                 st.error(
@@ -345,4 +427,4 @@ if user_prompt:
                 }
             )
 
-st.markdown('<p class="footer-note">Dharshan’s Lil Helper · Powered by Ollama</p>', unsafe_allow_html=True)
+st.markdown('<p class="footer-note">dharshan’s lil buddy · Powered by Ollama</p>', unsafe_allow_html=True)

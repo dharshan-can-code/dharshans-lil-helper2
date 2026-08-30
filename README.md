@@ -1,8 +1,8 @@
-# Dharshan's Lil Helper
+# Dharshan's Lil Buddy
 
 A Streamlit chatbot powered by Ollama's hosted API. It remembers the current
 browser-session conversation and can include uploaded PNG, JPG, JPEG, or WEBP
-images in a prompt.
+images in a prompt. Its logo is stored at `assets/lil_buddy_logo.png`.
 
 ## Run locally
 
