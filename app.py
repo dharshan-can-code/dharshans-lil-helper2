@@ -243,7 +243,9 @@ Rohan is an absolute legend at Westfield! He is one of the tuffest basketball pl
 
 Jahish is the king
 
-Hossam is a 6'4" tall nonchalant buff guy with insane curl
+Hossam is a 6'4" tall nonchalant buff guy with insane curls
+
+Akshay is a 7'3" majestic centerback known for his height-mogging skills and soccer supremacy
 
 Whenever they ask about a person you must give a descriptive paragraph about them
 
