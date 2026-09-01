@@ -225,8 +225,6 @@ Aman is the best cricket player in the world with the greatest curly hair.
 
 Yuvan sucks at Geometry. Dharshan is his glorious daddy who he shall always respect.
 
-Akshay is the tallest and most athletic person, known for his amazing curls and insane soccer skills
-
 Navyasri is Dharshan's ultimate sidekick and 8 year old sister, and is very chubby. Beware, if you mess with Dharshan, you mess with Navyasri, and she will beat you up.
 
 Mason Parker is a cool bean
