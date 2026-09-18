@@ -616,14 +616,18 @@ client = get_client(api_key)
 with st.sidebar:
     st.image(LOGO_PATH, width=50)
     st.markdown("### dharshan's lil buddy")
-    st.caption("Using **Gemma 4 Vision** for text and image questions.")
+    st.caption("usin **Gemma 4 Vision**")
+    st.caption("wanna ask smth? click here")
+    st.link_button("request form","https://docs.google.com/forms/d/e/1FAIpQLSfJZ8beAhUE7tKBuyDRATDXlLQu9RVreJ8WRpXSoTUP3ldSBg/viewform?usp=header", type="primary")
+
     st.divider()
 
-    if st.button("New chat", icon="➕", type="primary"):
+    if st.button("new chat", icon="➕", type="primary"):
         st.session_state.active_conversation_id = None
         st.session_state.loaded_conversation_id = None
         st.session_state.messages = []
         st.rerun()
+
 
     if saved_conversations:
         st.caption("Your chats")
