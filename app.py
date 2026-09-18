@@ -618,7 +618,7 @@ with st.sidebar:
     st.markdown("### dharshan's lil buddy")
     st.caption("usin **Gemma 4 Vision**")
     st.caption("wanna ask smth? click here")
-    st.link_button("request form","https://docs.google.com/forms/d/e/1FAIpQLSfJZ8beAhUE7tKBuyDRATDXlLQu9RVreJ8WRpXSoTUP3ldSBg/viewform?usp=header", type="primary")
+    st.link_button("request form","https://docs.google.com/forms/d/e/1FAIpQLSfJZ8beAhUE7tKBuyDRATDXlLQu9RVreJ8WRpXSoTUP3ldSBg/viewform?usp=header")
     st.html("""
         <style>
         a[data-testid="stLinkButton"] > div, 
