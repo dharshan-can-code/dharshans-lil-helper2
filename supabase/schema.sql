@@ -37,6 +37,14 @@ alter table public.anonymous_visitors enable row level security;
 alter table public.conversations enable row level security;
 alter table public.messages enable row level security;
 
+-- The Streamlit server uses the Supabase secret key. Its service_role can
+-- bypass RLS, but it still needs table privileges when table exposure is
+-- disabled in the project settings.
+grant usage on schema public to service_role;
+grant select, insert, update, delete on table public.anonymous_visitors to service_role;
+grant select, insert, update, delete on table public.conversations to service_role;
+grant select, insert, update, delete on table public.messages to service_role;
+
 create or replace function public.delete_expired_lil_buddy_chats()
 returns void
 language sql
