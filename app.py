@@ -219,10 +219,19 @@ def get_browser_token() -> str:
     if "browser_token" in st.session_state:
         return st.session_state.browser_token
 
-    token = st.context.cookies.get(COOKIE_NAME)
+    controller = CookieController(key="lil_buddy_cookie_controller")
+
+    # A Streamlit component receives browser cookies on the rerun after it is
+    # mounted. Waiting once is vital: minting immediately could overwrite an
+    # existing visitor's cookie before the browser has returned it.
+    if "cookie_controller_loaded" not in st.session_state:
+        st.session_state.cookie_controller_loaded = True
+        st.stop()
+
+    token = controller.get(COOKIE_NAME) or st.context.cookies.get(COOKIE_NAME)
     if not token:
         token = secrets.token_urlsafe(32)
-        CookieController(key="lil_buddy_cookie_controller").set(
+        controller.set(
             COOKIE_NAME,
             token,
             expires=datetime.now() + timedelta(days=400),
