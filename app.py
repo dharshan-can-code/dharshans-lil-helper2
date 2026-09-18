@@ -162,13 +162,18 @@ st.markdown(
 
     [data-testid="stSidebar"] .stButton > button { width: 100%; }
     .request-form-button {
-        display: block;
+        display: flex;
         width: 100%;
+        min-height: 2.5rem;
         box-sizing: border-box;
-        padding: .55rem .9rem;
+        align-items: center;
+        justify-content: center;
+        padding: .25rem .75rem;
         border-radius: 10px;
         background: #7c3aed;
         color: #fff !important;
+        font-family: 'Manrope', sans-serif;
+        font-size: .875rem;
         font-weight: 700;
         text-align: center;
         text-decoration: none !important;
