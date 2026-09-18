@@ -161,6 +161,29 @@ st.markdown(
     }
 
     [data-testid="stSidebar"] .stButton > button { width: 100%; }
+    .request-form-button {
+        display: flex;
+        width: 100%;
+        min-height: 2.5rem;
+        box-sizing: border-box;
+        align-items: center;
+        justify-content: center;
+        padding: .25rem .75rem;
+        border-radius: 10px;
+        background: #7c3aed;
+        color: #fff !important;
+        font-family: 'Manrope', sans-serif;
+        font-size: .875rem;
+        font-weight: 700;
+        text-align: center;
+        text-decoration: none !important;
+        transition: transform .15s ease, background .15s ease;
+    }
+    .request-form-button:hover {
+        background: #8b5cf6;
+        color: #fff !important;
+        transform: translateY(-1px);
+    }
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] small { color: var(--muted) !important; }
     hr { border-color: rgba(148, 163, 184, .16) !important; }
     .footer-note { color: #77839a; text-align: center; font-size: .78rem; margin-top: 2.5rem; }
@@ -618,7 +641,12 @@ with st.sidebar:
     st.markdown("### dharshan's lil buddy")
     st.caption("usin **Gemma 4 Vision**")
     st.caption("wanna ask smth? click here")
-    st.link_button("request form","https://docs.google.com/forms/d/e/1FAIpQLSfJZ8beAhUE7tKBuyDRATDXlLQu9RVreJ8WRpXSoTUP3ldSBg/viewform?usp=header", type="primary")
+    st.markdown(
+        '<a class="request-form-button" target="_blank" rel="noopener noreferrer" '
+        'href="https://docs.google.com/forms/d/e/1FAIpQLSfJZ8beAhUE7tKBuyDRATDXlLQu9RVreJ8WRpXSoTUP3ldSBg/viewform?usp=header">'
+        'request form</a>',
+        unsafe_allow_html=True,
+    )
     st.divider()
 
     if st.button("new chat", icon="➕", type="primary"):
