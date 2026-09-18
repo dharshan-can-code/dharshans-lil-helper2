@@ -802,4 +802,4 @@ if submission:
         st.rerun()
 
 st.markdown('<p class="footer-note">dharshan’s lil buddy · Powered by Ollama</p>', unsafe_allow_html=True)
-st.markdown('<p class="footer-note">v0.3.2</p>', unsafe_allow_html=True, text_alignment="center")
+st.markdown('<p class="footer-note">v0.3.3</p>', unsafe_allow_html=True, text_alignment="center")
