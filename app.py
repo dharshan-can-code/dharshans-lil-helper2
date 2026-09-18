@@ -784,6 +784,19 @@ if submission:
                 st.warning("The reply was shown, but couldn’t be saved to chat history.")
                 with st.expander("Technical details"):
                     st.code(str(error))
+    st.markdown(
+        """
+        <div id="scroll-anchor"></div>
+        <script>
+            const anchor = document.getElementById('scroll-anchor');
+            if (anchor) {
+                anchor.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        </script>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
     if created_conversation:
         st.rerun()
