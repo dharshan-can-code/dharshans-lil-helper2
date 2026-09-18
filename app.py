@@ -618,22 +618,32 @@ with st.sidebar:
     st.markdown("### dharshan's lil buddy")
     st.caption("usin **Gemma 4 Vision**")
     st.caption("wanna ask smth? click here")
-    st.link_button("request form","https://docs.google.com/forms/d/e/1FAIpQLSfJZ8beAhUE7tKBuyDRATDXlLQu9RVreJ8WRpXSoTUP3ldSBg/viewform?usp=header")
+
+    st.link_button(
+        "request form",
+        "https://docs.google.com/forms/d/e/1FAIpQLSfJZ8beAhUE7tKBuyDRATDXlLQu9RVreJ8WRpXSoTUP3ldSBg/viewform?usp=header"
+    )
+
     st.html("""
-        <style>
-        a[data-testid="stLinkButton"] > div, 
-        a[data-testid="stLinkButton"] > div * {
-            background-color: #7c3aed !important;
-            border-color: #7c3aed !important;
-            color: white !important;
-        }
-        /* Prevents it from flashing red when you hover your mouse over it */
-        a[data-testid="stLinkButton"] > div:hover {
-            background-color: #6d28d9 !important; /* A slightly darker purple for hover */
-            border-color: #6d28d9 !important;
-        }
-        </style>
+    <style>
+    a[data-testid="stLinkButton"] {
+        background-color: #7c3aed !important;
+        border: 1px solid #7c3aed !important;
+        color: white !important;
+    }
+
+    a[data-testid="stLinkButton"]:hover {
+        background-color: #6d28d9 !important;
+        border-color: #6d28d9 !important;
+        color: white !important;
+    }
+
+    a[data-testid="stLinkButton"] * {
+        color: white !important;
+    }
+    </style>
     """)
+
     st.divider()
 
     if st.button("new chat", icon="➕", type="primary"):
