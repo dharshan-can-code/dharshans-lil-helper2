@@ -619,7 +619,7 @@ with st.sidebar:
     st.caption("usin **Gemma 4 Vision**")
     st.caption("wanna ask smth? click here")
     st.link_button("request form","https://docs.google.com/forms/d/e/1FAIpQLSfJZ8beAhUE7tKBuyDRATDXlLQu9RVreJ8WRpXSoTUP3ldSBg/viewform?usp=header", type="primary")
-
+    st.html("<style>a[data-testid='stLinkButton'] div { background-color: #7c3aed !important; border-color: #7c3aed !important; }</style>")
     st.divider()
 
     if st.button("new chat", icon="➕", type="primary"):
