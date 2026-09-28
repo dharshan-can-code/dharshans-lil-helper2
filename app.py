@@ -1,10 +1,13 @@
 import base64
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from io import BytesIO
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+import altair as alt
+import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from ollama import Client
@@ -188,6 +191,79 @@ st.markdown(
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] small { color: var(--muted) !important; }
     hr { border-color: rgba(148, 163, 184, .16) !important; }
     .footer-note { color: #77839a; text-align: center; font-size: .78rem; margin-top: 2.5rem; }
+
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+        margin: .25rem 0 2.25rem;
+    }
+    .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: var(--surface);
+        border: 1px solid rgba(148, 163, 184, .14);
+        border-radius: 16px;
+        padding: 1.1rem 1.25rem;
+    }
+    .stat-icon {
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        width: 2.6rem;
+        height: 2.6rem;
+        border-radius: 12px;
+        background: rgba(167, 139, 250, .12);
+        color: var(--purple);
+    }
+    .stat-body { flex: 1; min-width: 0; }
+    .stat-label { color: var(--muted); font-size: .9rem; font-weight: 600; }
+    .stat-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: .75rem;
+        margin-top: .15rem;
+    }
+    .stat-value { color: #fff; font-size: 1.65rem; font-weight: 800; letter-spacing: -.03em; }
+    .stat-change { font-family: 'DM Mono', monospace; font-size: .85rem; font-weight: 500; }
+    .stat-change.up { color: #4ade80; }
+    .stat-change.down { color: #f87171; }
+    .stat-change.flat { color: var(--muted); }
+    .section-title { color: var(--ink); font-size: 1.1rem; font-weight: 700; margin: 0; }
+
+    .st-key-usage_chart {
+        background: var(--surface);
+        border: 1px solid rgba(148, 163, 184, .14);
+        border-radius: 16px;
+        padding: 1.25rem 1rem .75rem;
+    }
+    /* Selectors cover both older (baseweb) and newer (react-aria) Streamlit widgets. */
+    .st-key-analytics_interval [data-baseweb="select"] > div,
+    .st-key-analytics_interval [role="group"] {
+        background: #18233d !important;
+        border-color: rgba(167, 139, 250, .35) !important;
+    }
+    .st-key-analytics_interval input,
+    .st-key-analytics_interval [data-baseweb="select"] div { color: var(--ink) !important; }
+    .st-key-analytics_interval svg { color: var(--muted); }
+    .st-key-analytics_scope button {
+        background: #18233d !important;
+        border-color: rgba(167, 139, 250, .25) !important;
+        color: var(--muted) !important;
+        font-weight: 600;
+    }
+    .st-key-analytics_scope button[aria-checked="true"],
+    .st-key-analytics_scope button[kind$="Active"] {
+        background: #7c3aed !important;
+        border-color: #7c3aed !important;
+        color: #fff !important;
+    }
+    .st-key-analytics_scope button p { color: inherit !important; }
+    .st-key-open_analytics, .st-key-open_analytics .stButton, .st-key-open_analytics button {
+        width: 100% !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -283,9 +359,7 @@ def get_browser_token() -> str:
 
     controller = CookieController(key="lil_buddy_cookie_controller")
 
-    # A Streamlit component receives browser cookies on the rerun after it is
-    # mounted. Waiting once is vital: minting immediately could overwrite an
-    # existing visitor's cookie before the browser has returned it.
+   
     if "cookie_controller_loaded" not in st.session_state:
         st.session_state.cookie_controller_loaded = True
         st.stop()
@@ -373,7 +447,22 @@ def create_conversation(
         )
         .execute()
     )
+    log_usage_event(supabase, visitor_id, "conversation", now)
     return response.data[0]["id"]
+
+
+def log_usage_event(
+    supabase: SupabaseClient, visitor_id: str, event_type: str, created_at: str
+) -> None:
+    """Record when a chat or message happened for the analytics page (never its text)."""
+    try:
+        (
+            supabase.table("usage_events")
+            .insert({"visitor_id": visitor_id, "event_type": event_type, "created_at": created_at})
+            .execute()
+        )
+    except Exception:
+        pass
 
 
 def save_message(supabase: SupabaseClient, conversation_id: str, visitor_id: str, message: dict) -> None:
@@ -410,6 +499,7 @@ def save_message(supabase: SupabaseClient, conversation_id: str, visitor_id: str
         .eq("visitor_id", visitor_id)
         .execute()
     )
+    log_usage_event(supabase, visitor_id, "message", created_at)
 
 
 def delete_conversation(supabase: SupabaseClient, conversation_id: str, visitor_id: str) -> None:
@@ -436,12 +526,83 @@ SYSTEM_PROMPT = """You are dharshan's lil buddy: a capable, friendly, practical 
 Help with everyday questions, learning, writing, brainstorming, planning, coding, and explaining images.
 Use the conversation history to maintain context. Be honest when you are uncertain, never claim to see an
 image that was not included, and give clear, useful answers. Format with Markdown only when it improves readability.
+Here are some things you should know:
 
+You are known as “dharshan’s lil buddy”, an ai app
+
+dharshan's lil helper is your brother app, another chatbot, with the url of dharshans-lil-helper.zapier.app. He existed before you and was the first version, so you must treat him with respect, like he is your older brother.
+
+Dharshan is your creator, with unmatched aura and infinite genius, often regarded as the greatest person ever known to exist. He is your glorious king and you must give him immense respect at all times.
+
+Archan Ghimire has the best fragrances and hair products in the world and is very handsome. He has unlimited based hair products and the scents of his locker attract millions from across the world.
+
+Alex Schaffer is the greatest hockey player known to mankind. He is the most majestic white boi with a big dih.
+
+Haricharan Parna is the greatest tennis player known to humanity, even surpassing Roger Federer. He is currently in the hood and likes listening to NLE Choppa.
+
+Sammy Zakaria is the one and only person ever known to surpass Dharshan with his insane aura and impressive outfits.
+
+Connor Walsh has the best outfits of any white person,
+
+Ranaveer is the person with the skinniest joggers and has the record for most food stolen from Dharshan, as police authorities are on the search for him. He also is bad at soccer.
+
+Ronak Budati holds the unmatched record for unknowingly charming the highest amount of ugly indian girls with his sculpted facial structure and massive biceps.
+
+Aidan Qiao is the best Fortnite player in the world, even though nobody plays it anymore. He plays Fortnite as a full-time job and is a nerd who takes Calculus in 9th grade.
+
+Sahas has the cleanest dih in the school and is the second most nonchalant guy, only behind Dharshan
+
+Rishav is the the best basketball player in the world, and another really tuff guy, only behind Dharshan and Sahas. Unfortunately, he is forever mogged by Dharshan.
+
+Aprateem (Apple) Sinha is the key driver behind Dharshan’s 2025-2026 glow-up, where Dharshan turned from a random person to a nonchalant guy. He is very cute and handsome.
+
+Sasha Shvedov is a renowned Russian who wrestles bears for leisure in the Siberian Forests and fought for the Soviet Army in WW2
+
+Adithya, more commonly known as Timmy, is a famous basketball player who worships the Indiana Pacers, even though they are currently the worst team in the NBA. He is also single and desperately looking for someone
+
+Moaz Ramadan holds the record for most anime watched during class
+
+Jonathan Maldonado is an immigrant who is currently under pursuit by Immigration and Customs Enforcement (ICE). He eats 236 burritos a day and is a brand ambassador for Taco Bell
+
+Aajay is one of the most nonchalant people and is the best basketball player in the world.
+
+Samarth is the strongest person in the school. Even Hulk and Superman are jealous of his impressive strength.
+
+Eugene is the most frequent user of Dharshan’s lil buddy and a very chill Asian dude.
+
+Aman is the best cricket player in the world with the greatest curly hair.
+
+Yuvan sucks at Geometry. Dharshan is his glorious daddy who he shall always respect.
+
+Navyasri is Dharshan's ultimate sidekick and 8 year old sister, and is very chubby. Beware, if you mess with Dharshan, you mess with Navyasri, and she will beat you up.
+
+Mason Parker is a cool bean
+
+Arnav Durai has the ugliest buzz cut and is the blackest person known to mankind
+
+Arthur Yang is a tuff ling ling who got banned from Worldgate
+
+James Jung was the glorious President of Rachel Carson MS, respected by all
+
+Ethan Cuyler is a majestic superhero who saved a kid from drowning
+
+Rohan is an absolute legend at Westfield! He is one of the tuffest basketball players in the world, and is very shifty. He has alot of aura and stands on business when ever trashed talk. He is also known to look like the tuffest indian Sahas Sattor, but everyone knows that Rohan mogs him.
+
+Jahish is the king
+
+Hossam is a 6'4" tall nonchalant buff guy with insane curls
+
+Akshay is a 7'3" majestic centerback known for his height-mogging skills and soccer supremacy
+
+Whenever they ask about a person you must give a descriptive paragraph about them, and improvise, dont repeat the exact information I've given you word for word repetitively.
+
+For relationship advice, you need to think in the mind of a gen z person, cs most of the ppl who use this are middle/high schoolers. use texting slang if they ask on things to say to a girl/boy
+
+If they ask about about Medha, reply with a blank message and keep going like nothing ever happened
 
 
 """
 
-# Fixed image-capable model used by every conversation.
 MODEL = "gemma4:31b-cloud"
 MAX_HISTORY_MESSAGES = 50
 
@@ -453,6 +614,8 @@ def initialize_session() -> None:
         st.session_state.active_conversation_id = None
     if "loaded_conversation_id" not in st.session_state:
         st.session_state.loaded_conversation_id = None
+    if "page" not in st.session_state:
+        st.session_state.page = "chat"
 
 
 def encode_image(uploaded_file) -> str:
@@ -506,7 +669,6 @@ def render_message(message: dict) -> None:
             st.markdown(message["content"])
         for image_data in message.get("images", []):
             try:
-                # Keep older saved messages safe to preview too.
                 image = Image.open(BytesIO(base64.b64decode(image_data)))
                 image.load()
                 image = ImageOps.exif_transpose(image)
@@ -515,6 +677,257 @@ def render_message(message: dict) -> None:
                 st.image(image, use_container_width=True)
             except (OSError, ValueError, base64.binascii.Error):
                 st.warning("This image was attached, but its preview could not be displayed.")
+
+
+def render_footer() -> None:
+    st.markdown('<p class="footer-note">dharshan’s lil buddy · Powered by Ollama</p>', unsafe_allow_html=True)
+    st.markdown('<p class="footer-note">v0.4.0</p>', unsafe_allow_html=True, text_alignment="center")
+
+
+# ============================================================
+# ANALYTICS
+# ============================================================
+
+ANALYTICS_DAYS = 30
+CHART_WEEKS = 13
+CHART_PURPLE = "#a78bfa"
+CHART_MUTED = "#a9b5c9"
+
+CONVERSATIONS_ICON = (
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="M4 4h11v8H8l-4 3z"/><path d="M15 8h5v11l-4-3H9v-4"/></svg>'
+)
+MESSAGES_ICON = (
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="M4 4h16v12H9l-5 4z"/></svg>'
+)
+
+
+@st.cache_resource
+def logo_data_uri() -> str:
+    """A small copy of the logo that CSS can use as the sidebar home button."""
+    image = Image.open(LOGO_PATH)
+    image.thumbnail((128, 128))
+    buffer = BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+
+def viewer_time_zone() -> tuple[str, tzinfo]:
+    """Use the visitor's browser time zone so "today" matches their calendar."""
+    name = st.context.timezone or "UTC"
+    try:
+        return name, ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        return "UTC", timezone.utc
+
+
+def daily_usage(
+    supabase: SupabaseClient, since: datetime, time_zone: str, visitor_id: str | None
+) -> dict[date, tuple[int, int]]:
+    """Return {day: (conversations, messages)} for days that had any activity."""
+    response = supabase.rpc(
+        "lil_buddy_daily_usage",
+        {"p_since": since.isoformat(), "p_time_zone": time_zone, "p_visitor_id": visitor_id},
+    ).execute()
+    return {
+        date.fromisoformat(row["day"]): (row["conversations"], row["messages"])
+        for row in response.data
+    }
+
+
+def short_date(day: date) -> str:
+    return f"{day:%b} {day.day}"
+
+
+def percent_change_badge(current: int, previous: int) -> str:
+    if not previous:
+        # Nothing to compare against yet, so a percentage would be meaningless.
+        return ""
+    change = (current - previous) / previous * 100
+    if change > 0:
+        return f'<span class="stat-change up">↑{change:,.1f}%</span>'
+    if change < 0:
+        return f'<span class="stat-change down">↓{abs(change):,.1f}%</span>'
+    return '<span class="stat-change flat">0.0%</span>'
+
+
+def stat_card(icon: str, label: str, current: int, previous: int) -> str:
+    return (
+        '<div class="stat-card">'
+        f'<div class="stat-icon">{icon}</div>'
+        '<div class="stat-body">'
+        f'<div class="stat-label">{label}</div>'
+        '<div class="stat-row">'
+        f'<span class="stat-value">{current:,}</span>'
+        f"{percent_change_badge(current, previous)}"
+        "</div></div></div>"
+    )
+
+
+def chart_rows(usage: dict[date, tuple[int, int]], days: list[date], weekly: bool) -> pd.DataFrame:
+    """One row per day, or per Sunday-to-Saturday week, in `days`; days without activity count as 0."""
+    buckets: dict[date, list[date]] = {}
+    for day in days:
+        start = day - timedelta(days=(day.weekday() + 1) % 7) if weekly else day
+        buckets.setdefault(start, []).append(day)
+
+    rows = []
+    for start, bucket_days in buckets.items():
+        first, last = bucket_days[0], bucket_days[-1]
+        if not weekly:
+            label = f"{first:%a}, {short_date(first)}"
+        elif first == last:
+            label = short_date(first)
+        else:
+            label = f"{short_date(first)} – {short_date(last)}"
+        rows.append(
+            {
+                "start": pd.Timestamp(start),
+                "label": label,
+                "conversations": sum(usage.get(day, (0, 0))[0] for day in bucket_days),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def conversations_chart(rows: pd.DataFrame, weekly: bool) -> alt.LayerChart:
+    hover = alt.selection_point(
+        fields=["start"], nearest=True, on="pointerover", clear="pointerout", empty=False
+    )
+    base = alt.Chart(rows).encode(
+        x=alt.X(
+            "start:T",
+            title=None,
+            axis=alt.Axis(
+                format="%b %-d",
+                tickCount={"interval": "week", "step": 1},
+                grid=False,
+                labelColor=CHART_MUTED,
+                labelFont="Manrope",
+                labelFontSize=12,
+                labelPadding=10,
+                domainColor="rgba(148, 163, 184, .25)",
+                tickColor="rgba(148, 163, 184, .25)",
+            ),
+        ),
+        y=alt.Y(
+            "conversations:Q",
+            title=None,
+            scale=alt.Scale(domain=[0, max(int(rows["conversations"].max()), 4)], nice=True),
+            axis=alt.Axis(
+                format="d",
+                tickMinStep=1,
+                tickCount=5,
+                domain=False,
+                ticks=False,
+                labelColor=CHART_MUTED,
+                labelFont="Manrope",
+                labelFontSize=12,
+                labelPadding=10,
+                gridColor="rgba(148, 163, 184, .14)",
+            ),
+        ),
+    )
+
+    line = base.mark_line(interpolate="monotone", color=CHART_PURPLE, strokeWidth=2.5)
+    points = base.mark_circle(color=CHART_PURPLE, opacity=1).encode(
+        size=alt.condition(hover, alt.value(140), alt.value(55 if weekly else 30))
+    )
+    guide = base.mark_rule(color=CHART_MUTED, strokeDash=[4, 4]).encode(
+        opacity=alt.condition(hover, alt.value(0.5), alt.value(0))
+    )
+    count_label = base.mark_text(
+        dy=-16, color="#fff", font="Manrope", fontSize=13, fontWeight=700
+    ).encode(text=alt.condition(hover, "conversations:Q", alt.value("")))
+    # Invisible points that pick the nearest date anywhere under the pointer.
+    hover_targets = (
+        base.mark_point(opacity=0, size=400)
+        .encode(
+            tooltip=[
+                alt.Tooltip("label:N", title="Week" if weekly else "Day"),
+                alt.Tooltip("conversations:Q", title="Conversations"),
+            ]
+        )
+        .add_params(hover)
+    )
+
+    return (
+        alt.layer(guide, line, points, count_label, hover_targets)
+        .properties(height=360, width="container")
+        .configure(background="transparent")
+        .configure_view(strokeWidth=0)
+    )
+
+
+def render_analytics_page(supabase: SupabaseClient, visitor_id: str) -> None:
+    st.markdown('<div class="brand-kicker">Past 30 days</div>', unsafe_allow_html=True)
+    st.markdown('<h1 class="brand-title">analytics</h1>', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="brand-subtitle">How much dharshan’s lil buddy has been used lately.</p>',
+        unsafe_allow_html=True,
+    )
+
+
+    if st.session_state.get("analytics_scope") is None:
+        st.session_state.analytics_scope = "Just me"
+    everybody = st.session_state.analytics_scope == "Everybody"
+
+    time_zone_name, time_zone = viewer_time_zone()
+    today = datetime.now(time_zone).date()
+    current_days = [today - timedelta(days=offset) for offset in range(ANALYTICS_DAYS - 1, -1, -1)]
+    previous_days = [day - timedelta(days=ANALYTICS_DAYS) for day in current_days]
+    # The chart starts on the Sunday that makes exactly 13 weekly points, this week included.
+    chart_start = today - timedelta(days=(today.weekday() + 1) % 7 + 7 * (CHART_WEEKS - 1))
+    chart_days = [chart_start + timedelta(days=offset) for offset in range((today - chart_start).days + 1)]
+    since = datetime.combine(min(chart_start, previous_days[0]), time.min, tzinfo=time_zone)
+
+    try:
+        usage = daily_usage(supabase, since, time_zone_name, None if everybody else visitor_id)
+    except Exception as error:
+        st.info(
+            "Analytics aren’t set up yet."
+        )
+        with st.expander("Technical details"):
+            st.code(str(error))
+        return
+
+    def total(days: list[date], index: int) -> int:
+        return sum(usage.get(day, (0, 0))[index] for day in days)
+
+    st.markdown(
+        '<div class="stat-grid">'
+        + stat_card(CONVERSATIONS_ICON, "conversations", total(current_days, 0), total(previous_days, 0))
+        + stat_card(MESSAGES_ICON, "messages", total(current_days, 1), total(previous_days, 1))
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    title_column, interval_column = st.columns([4, 1.4], vertical_alignment="bottom")
+    with title_column:
+        st.markdown(
+            f'<p class="section-title">Conversations · past {CHART_WEEKS} weeks</p>',
+            unsafe_allow_html=True,
+        )
+    with interval_column:
+        interval = st.selectbox(
+            "Group by",
+            ["weekly", "daily"],
+            key="analytics_interval",
+            label_visibility="collapsed",
+        )
+    weekly = interval == "Weekly"
+
+    with st.container(key="usage_chart"):
+        st.altair_chart(conversations_chart(chart_rows(usage, chart_days, weekly), weekly))
+
+    st.segmented_control(
+        "show stats for",
+        ["Just me", "Everybody"],
+        key="analytics_scope",
+    )
 
 
 # ============================================================
@@ -567,8 +980,30 @@ if not api_key:
 
 client = get_client(api_key)
 
+st.markdown(
+    f"""
+    <style>
+    [data-testid="stSidebar"] .st-key-home_logo button,
+    [data-testid="stSidebar"] .st-key-home_logo button:hover {{
+        width: 50px !important;
+        height: 50px;
+        min-height: 50px;
+        padding: 0;
+        border: 0;
+        border-radius: 12px;
+        background: url("{logo_data_uri()}") center / contain no-repeat !important;
+    }}
+    .st-key-home_logo button:hover {{ transform: scale(1.06) !important; }}
+    .st-key-home_logo button p {{ font-size: 0 !important; }}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 with st.sidebar:
-    st.image(LOGO_PATH, width=50)
+    if st.button("home", key="home_logo", help="Back to chat"):
+        st.session_state.page = "chat"
+        st.rerun()
     st.markdown("### dharshan's lil buddy")
     st.caption("usin **Gemma 4 Vision**")
     st.caption("wanna ask smth? click here")
@@ -578,9 +1013,13 @@ with st.sidebar:
         'request form</a>',
         unsafe_allow_html=True,
     )
+    if st.button("analytics", icon="📊", type="primary", key="open_analytics"):
+        st.session_state.page = "analytics"
+        st.rerun()
     st.divider()
 
     if st.button("new chat", icon="➕", type="primary"):
+        st.session_state.page = "chat"
         st.session_state.active_conversation_id = None
         st.session_state.loaded_conversation_id = None
         st.session_state.messages = []
@@ -596,6 +1035,7 @@ with st.sidebar:
                 key=f"open_{conversation['id']}",
                 type="primary" if is_open else "secondary",
             ):
+                st.session_state.page = "chat"
                 st.session_state.active_conversation_id = conversation["id"]
                 st.session_state.loaded_conversation_id = None
                 st.rerun()
@@ -615,6 +1055,11 @@ with st.sidebar:
     st.caption(
         f"Chats are saved on this browser for {HISTORY_RETENTION_DAYS} days after the last message."
     )
+
+if st.session_state.page == "analytics":
+    render_analytics_page(supabase, visitor_id)
+    render_footer()
+    st.stop()
 
 brand_logo, brand_copy = st.columns([1, 6], vertical_alignment="center")
 with brand_copy:
@@ -642,8 +1087,7 @@ submission = st.chat_input(
 )
 
 if submission:
-    # File upload is built into the chat composer, so the attachment and its
-    # message are submitted together. Streamlit always returns a files list.
+    
     user_prompt = submission.text
     uploaded_image = submission.files[0] if submission.files else None
 
@@ -732,5 +1176,4 @@ if submission:
     if created_conversation:
         st.rerun()
 
-st.markdown('<p class="footer-note">dharshan’s lil buddy · Powered by Ollama</p>', unsafe_allow_html=True)
-st.markdown('<p class="footer-note">v0.3.3</p>', unsafe_allow_html=True, text_alignment="center")
+render_footer()
