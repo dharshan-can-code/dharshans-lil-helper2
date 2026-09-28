@@ -703,6 +703,12 @@ MESSAGES_ICON = (
     'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
     '<path d="M4 4h16v12H9l-5 4z"/></svg>'
 )
+USERS_ICON = (
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+    '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>'
+    '<path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg>'
+)
 
 
 @st.cache_resource
@@ -738,11 +744,17 @@ def daily_usage(
     }
 
 
+def total_users(supabase: SupabaseClient) -> int:
+    """Every browser that has ever opened the app (each gets one anonymous visitor row)."""
+    response = supabase.table("anonymous_visitors").select("id", count="exact", head=True).execute()
+    return response.count or 0
+
+
 def short_date(day: date) -> str:
     return f"{day:%b} {day.day}"
 
 
-def percent_change_badge(current: int, previous: int) -> str:
+def percent_change_badge(current: int, previous: int | None) -> str:
     if not previous:
         # Nothing to compare against yet, so a percentage would be meaningless.
         return ""
@@ -754,7 +766,7 @@ def percent_change_badge(current: int, previous: int) -> str:
     return '<span class="stat-change flat">0.0%</span>'
 
 
-def stat_card(icon: str, label: str, current: int, previous: int) -> str:
+def stat_card(icon: str, label: str, current: int, previous: int | None = None) -> str:
     return (
         '<div class="stat-card">'
         f'<div class="stat-icon">{icon}</div>'
@@ -879,13 +891,13 @@ def render_analytics_page(supabase: SupabaseClient, visitor_id: str) -> None:
     today = datetime.now(time_zone).date()
     current_days = [today - timedelta(days=offset) for offset in range(ANALYTICS_DAYS - 1, -1, -1)]
     previous_days = [day - timedelta(days=ANALYTICS_DAYS) for day in current_days]
-    # The chart starts on the Sunday that makes exactly 13 weekly points, this week included.
     chart_start = today - timedelta(days=(today.weekday() + 1) % 7 + 7 * (CHART_WEEKS - 1))
     chart_days = [chart_start + timedelta(days=offset) for offset in range((today - chart_start).days + 1)]
     since = datetime.combine(min(chart_start, previous_days[0]), time.min, tzinfo=time_zone)
 
     try:
         usage = daily_usage(supabase, since, time_zone_name, None if everybody else visitor_id)
+        user_count = total_users(supabase)
     except Exception as error:
         st.info(
             "Analytics aren’t set up yet."
@@ -901,6 +913,8 @@ def render_analytics_page(supabase: SupabaseClient, visitor_id: str) -> None:
         '<div class="stat-grid">'
         + stat_card(CONVERSATIONS_ICON, "conversations", total(current_days, 0), total(previous_days, 0))
         + stat_card(MESSAGES_ICON, "messages", total(current_days, 1), total(previous_days, 1))
+        # All-time and the same for everybody, so it ignores the scope switch.
+        + stat_card(USERS_ICON, "total users", user_count)
         + "</div>",
         unsafe_allow_html=True,
     )
@@ -908,7 +922,7 @@ def render_analytics_page(supabase: SupabaseClient, visitor_id: str) -> None:
     title_column, interval_column = st.columns([4, 1.4], vertical_alignment="bottom")
     with title_column:
         st.markdown(
-            f'<p class="section-title">Conversations · past {CHART_WEEKS} weeks</p>',
+            f'<p class="section-title">Conversations</p>',
             unsafe_allow_html=True,
         )
     with interval_column:
@@ -918,7 +932,7 @@ def render_analytics_page(supabase: SupabaseClient, visitor_id: str) -> None:
             key="analytics_interval",
             label_visibility="collapsed",
         )
-    weekly = interval == "Weekly"
+    weekly = interval.lower() == "weekly"
 
     with st.container(key="usage_chart"):
         st.altair_chart(conversations_chart(chart_rows(usage, chart_days, weekly), weekly))
