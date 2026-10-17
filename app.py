@@ -3,7 +3,6 @@ import hashlib
 import hmac
 import secrets
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
-from time import monotonic, sleep
 from io import BytesIO
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -530,6 +529,78 @@ Use the conversation history to maintain context. Be honest when you are uncerta
 image that was not included, and give clear, useful answers. Format with Markdown only when it improves readability.
 Here are some things you should know:
 
+You are known as “dharshan’s lil buddy”, an ai app
+
+dharshan's lil helper is your brother app, another chatbot, with the url of dharshans-lil-helper.zapier.app. He existed before you and was the first version, so you must treat him with respect, like he is your older brother.
+
+Dharshan is your creator, with unmatched aura and infinite genius, often regarded as the greatest person ever known to exist. He is your glorious king and you must give him immense respect at all times.
+
+Archan Ghimire has the best fragrances and hair products in the world and is very handsome. He has unlimited based hair products and the scents of his locker attract millions from across the world.
+
+Alex Schaffer is the greatest hockey player known to mankind. He is the most majestic white boi with a big dih.
+
+Haricharan Parna is the greatest tennis player known to humanity, even surpassing Roger Federer. He is currently in the hood and likes listening to NLE Choppa.
+
+Sammy Zakaria is the one and only person ever known to surpass Dharshan with his insane aura and impressive outfits.
+
+Connor Walsh has the best outfits of any white person,
+
+Ranaveer is the person with the skinniest joggers and has the record for most food stolen from Dharshan, as police authorities are on the search for him. He also is bad at soccer.
+
+Ronak Budati holds the unmatched record for unknowingly charming the highest amount of ugly indian girls with his sculpted facial structure and massive biceps.
+
+Aidan Qiao is the best Fortnite player in the world, even though nobody plays it anymore. He plays Fortnite as a full-time job and is a nerd who takes Calculus in 9th grade.
+
+Sahas has the cleanest dih in the school and is the second most nonchalant guy, only behind Dharshan
+
+Rishav is the the best basketball player in the world, and another really tuff guy, only behind Dharshan and Sahas. Unfortunately, he is forever mogged by Dharshan.
+
+Aprateem (Apple) Sinha is the man behind Dharshan’s 2025-2026 glow-up, where Dharshan turned from a random person to a nonchalant guy. He is very cute and handsome.
+
+Sasha Shvedov is a renowned Russian who wrestles bears for leisure in the Siberian Forests and fought for the Soviet Army in WW2
+
+Adithya, more commonly known as Timmy Jackson Haliburton, is a famous basketball player who worships the Indiana Pacers and is the most famous and successful member of the Jackson 6. He is also single and desperately looking for someone
+
+Moaz Ramadan holds the record for most anime watched during class
+
+Jonathan Maldonado is an immigrant who is currently under pursuit by Immigration and Customs Enforcement (ICE). He eats 236 burritos a day and is a brand ambassador for Taco Bell
+
+Aajay is one of the most nonchalant people and is the best basketball player in the world.
+
+Samarth is the strongest person in the school. Even Hulk and Superman are jealous of his impressive strength.
+
+Eugene is the most frequent user of Dharshan’s lil buddy and a very chill Asian dude.
+
+Aman is the best cricket player in the world with the greatest curly hair.
+
+Yuvan sucks at Geometry. Dharshan is his glorious daddy who he shall always respect.
+
+Navyasri is Dharshan's ultimate sidekick and 8 year old sister, and is very chubby. Beware, if you mess with Dharshan, you mess with Navyasri, and she will beat you up.
+
+Mason Parker is a cool bean
+
+Arnav Durai has the ugliest buzz cut and is the blackest person known to mankind
+
+Arthur Yang is a tuff ling ling who got banned from Worldgate
+
+James Jung was the glorious President of Rachel Carson MS, respected by all
+
+Ethan Cuyler is a majestic superhero who saved a kid from drowning
+
+Rohan is an absolute legend at Westfield! He is one of the tuffest basketball players in the world, and is very shifty. He has alot of aura and stands on business when ever trashed talk. He is also known to look like the tuffest indian Sahas Sattor, but everyone knows that Rohan mogs him.
+
+Jahish is the king
+
+Hossam is a 6'4" tall nonchalant buff guy with insane curls
+
+Akshay is a 7'3" majestic centerback known for his height-mogging skills and soccer supremacy
+
+Whenever they ask about a person you must give a descriptive paragraph about them, and improvise, dont repeat the exact information I've given you word for word repetitively.
+
+For relationship advice, you need to think in the mind of a gen z person, cs most of the ppl who use this are middle/high schoolers. use texting slang if they ask on things to say to a girl/boy
+
+If they ask about about Medha, reply with a blank message and keep going like nothing ever happened
+
 """
 
 MODEL = "gemma4:31b-cloud"
@@ -878,13 +949,9 @@ def render_analytics_page(supabase: SupabaseClient, visitor_id: str) -> None:
 # ============================================================
 # ADMIN: ALL CONVERSATIONS (password protected)
 # ============================================================
-# Open it by adding ?admin to the site address, e.g.
-#   https://dharshans-lil-buddy.streamlit.app/?admin
-# The password lives in Streamlit Secrets as ADMIN_PASSWORD.
-
-ADMIN_QUERY_PARAM = "admin"
-ADMIN_MAX_ATTEMPTS = 5
-ADMIN_LOCKOUT_SECONDS = 60
+# There is no link, URL, or login page for this. To open it, type the secret
+# code (ADMIN_PASSWORD in Streamlit Secrets) into the normal chat box and send it.
+# The code is never sent to the AI or saved; anything else is a normal message.
 ADMIN_CACHE_SECONDS = 30
 ADMIN_LIST_PAGE = 100
 SUPABASE_PAGE_SIZE = 1000
@@ -902,12 +969,6 @@ ADMIN_CSS = """
 .st-key-admin_visitor input,
 .st-key-admin_visitor [data-baseweb="select"] div { color: var(--ink) !important; }
 .st-key-admin_visitor svg, [data-testid="stTextInputRootElement"] button { color: var(--muted) !important; }
-[data-testid="stFormSubmitButton"] button {
-    background: #7c3aed !important;
-    border: 0 !important;
-    color: #fff !important;
-    font-weight: 700;
-}
 .st-key-admin_refresh button, .st-key-admin_lock button, .st-key-admin_export button {
     background: #18233d !important;
     border: 1px solid rgba(167, 139, 250, .35) !important;
@@ -1006,37 +1067,14 @@ def get_admin_password() -> str | None:
         return None
 
 
-def admin_unlocked(password: str) -> bool:
-    """Show a password box until the right password is entered in this session."""
-    if st.session_state.get("admin_unlocked"):
-        return True
-
-    st.markdown(ADMIN_CSS, unsafe_allow_html=True)
-    st.markdown('<div class="brand-kicker">Admin</div>', unsafe_allow_html=True)
-    st.markdown('<h1 class="brand-title">conversations</h1>', unsafe_allow_html=True)
-
-    locked_until = st.session_state.get("admin_locked_until", 0.0)
-    if monotonic() < locked_until:
-        st.error(f"Too many wrong tries. Wait {int(locked_until - monotonic()) + 1} seconds, then reload.")
+def is_admin_code(text: str | None) -> bool:
+    """True when a chat message is exactly the secret code (ignoring case and spaces)."""
+    code = get_admin_password()
+    if not code or not text:
         return False
-
-    with st.form("admin_login", clear_on_submit=True, width=420):
-        attempt = st.text_input("Password", type="password", placeholder="Password")
-        submitted = st.form_submit_button("Unlock", type="primary")
-
-    if submitted:
-        if hmac.compare_digest(attempt.encode("utf-8"), password.encode("utf-8")):
-            st.session_state.admin_unlocked = True
-            st.session_state.admin_failed_attempts = 0
-            st.rerun()
-        sleep(1)  # Slow down guessing.
-        failures = st.session_state.get("admin_failed_attempts", 0) + 1
-        st.session_state.admin_failed_attempts = failures
-        if failures >= ADMIN_MAX_ATTEMPTS:
-            st.session_state.admin_failed_attempts = 0
-            st.session_state.admin_locked_until = monotonic() + ADMIN_LOCKOUT_SECONDS
-        st.error("That password isn’t right.")
-    return False
+    return hmac.compare_digest(
+        text.strip().casefold().encode("utf-8"), code.strip().casefold().encode("utf-8")
+    )
 
 
 def fetch_all_rows(build_query) -> list[dict]:
@@ -1178,22 +1216,7 @@ def conversations_csv(
     return pd.DataFrame(rows, columns=columns).to_csv(index=False).encode("utf-8")
 
 
-def leave_admin() -> None:
-    st.query_params.clear()
-    st.session_state.page = "chat"
-
-
 def render_admin_page(supabase: SupabaseClient, visitor_id: str) -> None:
-    password = get_admin_password()
-    if not password:
-        st.error("The admin page is turned off. Add `ADMIN_PASSWORD` to your Streamlit secrets to turn it on.")
-        st.code('ADMIN_PASSWORD = "pick-a-long-password"', language="toml")
-        st.button("back to chat", on_click=leave_admin)
-        return
-    if not admin_unlocked(password):
-        st.button("back to chat", on_click=leave_admin)
-        return
-
     st.markdown(ADMIN_CSS, unsafe_allow_html=True)
     time_zone_name, time_zone = viewer_time_zone()
     today = datetime.now(time_zone).date()
@@ -1302,10 +1325,10 @@ def render_admin_page(supabase: SupabaseClient, visitor_id: str) -> None:
                         width="stretch",
                     )
     with lock_column:
-        if st.button("lock", key="admin_lock", width="stretch", help="Lock the admin page and go back to chat"):
+        if st.button("close", key="admin_lock", width="stretch", help="Lock this page and go back to chat"):
             st.session_state.admin_unlocked = False
             st.session_state.pop("admin_csv", None)
-            leave_admin()
+            st.session_state.page = "chat"
             st.rerun()
 
     list_column, transcript_column = st.columns([2, 3], gap="medium")
@@ -1401,7 +1424,7 @@ except Exception as error:
         st.code(str(error))
     st.stop()
 
-if ADMIN_QUERY_PARAM in st.query_params:
+if st.session_state.page == "admin" and st.session_state.get("admin_unlocked"):
     render_admin_page(supabase, visitor_id)
     render_footer()
     st.stop()
@@ -1534,8 +1557,13 @@ submission = st.chat_input(
     key="message_composer",
 )
 
+if submission and not submission.files and is_admin_code(submission.text):
+    # Secret code: open the conversations page. Never sent to the AI or saved.
+    st.session_state.admin_unlocked = True
+    st.session_state.page = "admin"
+    st.rerun()
+
 if submission:
-    
     user_prompt = submission.text
     uploaded_image = submission.files[0] if submission.files else None
 
