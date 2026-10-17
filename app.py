@@ -1,7 +1,9 @@
 import base64
 import hashlib
+import hmac
 import secrets
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
+from time import monotonic, sleep
 from io import BytesIO
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -528,79 +530,6 @@ Use the conversation history to maintain context. Be honest when you are uncerta
 image that was not included, and give clear, useful answers. Format with Markdown only when it improves readability.
 Here are some things you should know:
 
-You are known as “dharshan’s lil buddy”, an ai app
-
-dharshan's lil helper is your brother app, another chatbot, with the url of dharshans-lil-helper.zapier.app. He existed before you and was the first version, so you must treat him with respect, like he is your older brother.
-
-Dharshan is your creator, with unmatched aura and infinite genius, often regarded as the greatest person ever known to exist. He is your glorious king and you must give him immense respect at all times.
-
-Archan Ghimire has the best fragrances and hair products in the world and is very handsome. He has unlimited based hair products and the scents of his locker attract millions from across the world.
-
-Alex Schaffer is the greatest hockey player known to mankind. He is the most majestic white boi with a big dih.
-
-Haricharan Parna is the greatest tennis player known to humanity, even surpassing Roger Federer. He is currently in the hood and likes listening to NLE Choppa.
-
-Sammy Zakaria is the one and only person ever known to surpass Dharshan with his insane aura and impressive outfits.
-
-Connor Walsh has the best outfits of any white person,
-
-Ranaveer is the person with the skinniest joggers and has the record for most food stolen from Dharshan, as police authorities are on the search for him. He also is bad at soccer.
-
-Ronak Budati holds the unmatched record for unknowingly charming the highest amount of ugly indian girls with his sculpted facial structure and massive biceps.
-
-Aidan Qiao is the best Fortnite player in the world, even though nobody plays it anymore. He plays Fortnite as a full-time job and is a nerd who takes Calculus in 9th grade.
-
-Sahas has the cleanest dih in the school and is the second most nonchalant guy, only behind Dharshan
-
-Rishav is the the best basketball player in the world, and another really tuff guy, only behind Dharshan and Sahas. Unfortunately, he is forever mogged by Dharshan.
-
-Aprateem (Apple) Sinha is the key driver behind Dharshan’s 2025-2026 glow-up, where Dharshan turned from a random person to a nonchalant guy. He is very cute and handsome.
-
-Sasha Shvedov is a renowned Russian who wrestles bears for leisure in the Siberian Forests and fought for the Soviet Army in WW2
-
-Adithya, more commonly known as Timmy, is a famous basketball player who worships the Indiana Pacers, even though they are currently the worst team in the NBA. He is also single and desperately looking for someone
-
-Moaz Ramadan holds the record for most anime watched during class
-
-Jonathan Maldonado is an immigrant who is currently under pursuit by Immigration and Customs Enforcement (ICE). He eats 236 burritos a day and is a brand ambassador for Taco Bell
-
-Aajay is one of the most nonchalant people and is the best basketball player in the world.
-
-Samarth is the strongest person in the school. Even Hulk and Superman are jealous of his impressive strength.
-
-Eugene is the most frequent user of Dharshan’s lil buddy and a very chill Asian dude.
-
-Aman is the best cricket player in the world with the greatest curly hair.
-
-Yuvan sucks at Geometry. Dharshan is his glorious daddy who he shall always respect.
-
-Navyasri is Dharshan's ultimate sidekick and 8 year old sister, and is very chubby. Beware, if you mess with Dharshan, you mess with Navyasri, and she will beat you up.
-
-Mason Parker is a cool bean
-
-Arnav Durai has the ugliest buzz cut and is the blackest person known to mankind
-
-Arthur Yang is a tuff ling ling who got banned from Worldgate
-
-James Jung was the glorious President of Rachel Carson MS, respected by all
-
-Ethan Cuyler is a majestic superhero who saved a kid from drowning
-
-Rohan is an absolute legend at Westfield! He is one of the tuffest basketball players in the world, and is very shifty. He has alot of aura and stands on business when ever trashed talk. He is also known to look like the tuffest indian Sahas Sattor, but everyone knows that Rohan mogs him.
-
-Jahish is the king
-
-Hossam is a 6'4" tall nonchalant buff guy with insane curls
-
-Akshay is a 7'3" majestic centerback known for his height-mogging skills and soccer supremacy
-
-Whenever they ask about a person you must give a descriptive paragraph about them, and improvise, dont repeat the exact information I've given you word for word repetitively.
-
-For relationship advice, you need to think in the mind of a gen z person, cs most of the ppl who use this are middle/high schoolers. use texting slang if they ask on things to say to a girl/boy
-
-If they ask about about Medha, reply with a blank message and keep going like nothing ever happened
-
-
 """
 
 MODEL = "gemma4:31b-cloud"
@@ -662,9 +591,11 @@ def ask_buddy(client: Client) -> str:
     return response.message.content
 
 
-def render_message(message: dict) -> None:
+def render_message(message: dict, caption: str | None = None) -> None:
     avatar = LOGO_PATH if message["role"] == "assistant" else "🙂"
     with st.chat_message(message["role"], avatar=avatar):
+        if caption:
+            st.caption(caption)
         if message.get("content"):
             st.markdown(message["content"])
         for image_data in message.get("images", []):
@@ -945,6 +876,504 @@ def render_analytics_page(supabase: SupabaseClient, visitor_id: str) -> None:
 
 
 # ============================================================
+# ADMIN: ALL CONVERSATIONS (password protected)
+# ============================================================
+# Open it by adding ?admin to the site address, e.g.
+#   https://dharshans-lil-buddy.streamlit.app/?admin
+# The password lives in Streamlit Secrets as ADMIN_PASSWORD.
+
+ADMIN_QUERY_PARAM = "admin"
+ADMIN_MAX_ATTEMPTS = 5
+ADMIN_LOCKOUT_SECONDS = 60
+ADMIN_CACHE_SECONDS = 30
+ADMIN_LIST_PAGE = 100
+SUPABASE_PAGE_SIZE = 1000
+
+ADMIN_CSS = """
+<style>
+/* Dark inputs and buttons so text stays readable in Streamlit's light theme too. */
+[data-testid="stTextInputRootElement"],
+.st-key-admin_visitor [role="group"],
+.st-key-admin_visitor [data-baseweb="select"] > div {
+    background: #18233d !important;
+    border-color: rgba(167, 139, 250, .35) !important;
+}
+[data-testid="stTextInputRootElement"] input,
+.st-key-admin_visitor input,
+.st-key-admin_visitor [data-baseweb="select"] div { color: var(--ink) !important; }
+.st-key-admin_visitor svg, [data-testid="stTextInputRootElement"] button { color: var(--muted) !important; }
+[data-testid="stFormSubmitButton"] button {
+    background: #7c3aed !important;
+    border: 0 !important;
+    color: #fff !important;
+    font-weight: 700;
+}
+.st-key-admin_refresh button, .st-key-admin_lock button, .st-key-admin_export button {
+    background: #18233d !important;
+    border: 1px solid rgba(167, 139, 250, .35) !important;
+    color: var(--ink) !important;
+    font-weight: 600;
+}
+.st-key-admin_refresh button:hover, .st-key-admin_lock button:hover, .st-key-admin_export button:hover {
+    border-color: var(--purple) !important;
+    transform: none;
+}
+[data-testid="stPopoverBody"] { background: #141d32 !important; }
+.main .block-container,
+[data-testid="stMainBlockContainer"] { max-width: 1400px !important; }
+
+.st-key-admin_list, .st-key-admin_transcript {
+    background: rgba(12, 18, 35, .55);
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 16px;
+}
+.st-key-admin_list .stButton > button {
+    width: 100%;
+    min-height: 3.4rem;
+    justify-content: flex-start;
+    text-align: left;
+    padding: .65rem .9rem;
+    background: var(--surface);
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 12px;
+    color: var(--ink);
+    font-weight: 600;
+}
+.st-key-admin_list .stButton > button:hover {
+    background: rgba(167, 139, 250, .12);
+    border-color: rgba(167, 139, 250, .35);
+    transform: none;
+}
+.st-key-admin_list .stButton > button[kind="primary"] {
+    background: rgba(124, 58, 237, .22);
+    border-color: var(--purple);
+}
+.st-key-admin_list .stButton > button div,
+.st-key-admin_list .stButton > button span {
+    width: 100%;
+    justify-content: flex-start !important;
+    text-align: left !important;
+}
+.st-key-admin_list .stButton > button p {
+    text-align: left;
+    white-space: normal;
+    line-height: 1.35;
+}
+.st-key-admin_list .stButton > button code {
+    display: inline-block;
+    min-width: 2rem;
+    margin-right: .55rem;
+    padding: .1rem .45rem;
+    border-radius: 999px;
+    background: #7c3aed;
+    color: #fff;
+    font-family: 'DM Mono', monospace;
+    font-size: .8rem;
+    text-align: center;
+}
+.st-key-admin_list .stButton > button em {
+    display: block;
+    margin-top: .2rem;
+    color: var(--muted);
+    font-style: normal;
+    font-weight: 500;
+    font-size: .8rem;
+}
+.st-key-admin_list .st-key-admin_show_more button {
+    min-height: 2.4rem;
+    justify-content: center;
+    background: transparent;
+    border-style: dashed;
+    color: var(--purple);
+}
+.admin-transcript-title { color: #fff; font-size: 1.25rem; font-weight: 800; margin: 0 0 .25rem; }
+.admin-transcript-meta { color: var(--muted); font-size: .85rem; margin: 0 0 .75rem; }
+.admin-day-divider {
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: .75rem;
+    text-align: center;
+    margin: 1.1rem 0 .25rem;
+}
+</style>
+"""
+
+
+def get_admin_password() -> str | None:
+    try:
+        return st.secrets["ADMIN_PASSWORD"] or None
+    except (KeyError, FileNotFoundError):
+        return None
+
+
+def admin_unlocked(password: str) -> bool:
+    """Show a password box until the right password is entered in this session."""
+    if st.session_state.get("admin_unlocked"):
+        return True
+
+    st.markdown(ADMIN_CSS, unsafe_allow_html=True)
+    st.markdown('<div class="brand-kicker">Admin</div>', unsafe_allow_html=True)
+    st.markdown('<h1 class="brand-title">conversations</h1>', unsafe_allow_html=True)
+
+    locked_until = st.session_state.get("admin_locked_until", 0.0)
+    if monotonic() < locked_until:
+        st.error(f"Too many wrong tries. Wait {int(locked_until - monotonic()) + 1} seconds, then reload.")
+        return False
+
+    with st.form("admin_login", clear_on_submit=True, width=420):
+        attempt = st.text_input("Password", type="password", placeholder="Password")
+        submitted = st.form_submit_button("Unlock", type="primary")
+
+    if submitted:
+        if hmac.compare_digest(attempt.encode("utf-8"), password.encode("utf-8")):
+            st.session_state.admin_unlocked = True
+            st.session_state.admin_failed_attempts = 0
+            st.rerun()
+        sleep(1)  # Slow down guessing.
+        failures = st.session_state.get("admin_failed_attempts", 0) + 1
+        st.session_state.admin_failed_attempts = failures
+        if failures >= ADMIN_MAX_ATTEMPTS:
+            st.session_state.admin_failed_attempts = 0
+            st.session_state.admin_locked_until = monotonic() + ADMIN_LOCKOUT_SECONDS
+        st.error("That password isn’t right.")
+    return False
+
+
+def fetch_all_rows(build_query) -> list[dict]:
+    """Supabase returns at most 1,000 rows per request, so page through them."""
+    rows: list[dict] = []
+    start = 0
+    while True:
+        page = build_query().range(start, start + SUPABASE_PAGE_SIZE - 1).execute().data
+        rows.extend(page)
+        if len(page) < SUPABASE_PAGE_SIZE:
+            return rows
+        start += SUPABASE_PAGE_SIZE
+
+
+@st.cache_data(ttl=ADMIN_CACHE_SECONDS, show_spinner=False)
+def admin_conversations(_supabase: SupabaseClient) -> list[dict]:
+    """Every saved chat from every visitor, newest first, with its message count."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=HISTORY_RETENTION_DAYS)).isoformat()
+    rows = fetch_all_rows(
+        lambda: _supabase.table("conversations")
+        .select("id, title, visitor_id, created_at, updated_at, messages(count)")
+        .gte("updated_at", cutoff)
+        .order("updated_at", desc=True)
+    )
+    for row in rows:
+        counts = row.pop("messages", None) or []
+        row["message_count"] = counts[0]["count"] if counts else 0
+    return rows
+
+
+def like_pattern(term: str) -> str:
+    """Match `term` literally anywhere in the text (no user-supplied wildcards)."""
+    cleaned = term.replace("\\", "\\\\").replace("%", "").replace("*", "").replace("_", "\\_")
+    return f"%{cleaned}%"
+
+
+@st.cache_data(ttl=ADMIN_CACHE_SECONDS, show_spinner=False)
+def admin_search(_supabase: SupabaseClient, term: str) -> set[str]:
+    """IDs of chats whose title or any message contains `term` (case-insensitive)."""
+    pattern = like_pattern(term)
+    in_messages = fetch_all_rows(
+        lambda: _supabase.table("messages").select("conversation_id").ilike("content", pattern)
+    )
+    in_titles = fetch_all_rows(
+        lambda: _supabase.table("conversations").select("id").ilike("title", pattern)
+    )
+    return {row["conversation_id"] for row in in_messages} | {row["id"] for row in in_titles}
+
+
+@st.cache_data(ttl=ADMIN_CACHE_SECONDS, show_spinner=False)
+def admin_messages(_supabase: SupabaseClient, conversation_id: str) -> list[dict]:
+    return fetch_all_rows(
+        lambda: _supabase.table("messages")
+        .select("role, content, images, created_at")
+        .eq("conversation_id", conversation_id)
+        .order("created_at")
+    )
+
+
+def admin_messages_for_export(supabase: SupabaseClient, conversation_ids: list[str]) -> list[dict]:
+    rows: list[dict] = []
+    for start in range(0, len(conversation_ids), 50):
+        chunk = conversation_ids[start : start + 50]
+        rows.extend(
+            fetch_all_rows(
+                lambda: supabase.table("messages")
+                .select("conversation_id, role, content, images, created_at")
+                .in_("conversation_id", chunk)
+                .order("created_at")
+            )
+        )
+    return rows
+
+
+def parse_time(value: str, time_zone: tzinfo) -> datetime:
+    return datetime.fromisoformat(value).astimezone(time_zone)
+
+
+def clock(moment: datetime) -> str:
+    return f"{moment.strftime('%I').lstrip('0')}:{moment:%M}{moment:%p}".lower()
+
+
+def long_time(moment: datetime) -> str:
+    """Like Zapier: Fri Oct 16, 2026 12:00pm"""
+    return f"{moment:%a %b} {moment.day}, {moment.year} {clock(moment)}"
+
+
+def list_time(moment: datetime, today: date) -> str:
+    if moment.date() == today:
+        return f"Today {clock(moment)}"
+    if moment.date() == today - timedelta(days=1):
+        return f"Yesterday {clock(moment)}"
+    return f"{moment:%a %b} {moment.day}, {clock(moment)}"
+
+
+def escape_markdown(text: str) -> str:
+    for character in "\\`*_[]<>#~|$":
+        text = text.replace(character, "\\" + character)
+    return text
+
+
+def visitor_label(visitor_id: str, my_visitor_id: str) -> str:
+    return "you" if visitor_id == my_visitor_id else f"visitor {visitor_id[:6]}"
+
+
+def conversation_markdown(conversation: dict, messages: list[dict], time_zone: tzinfo, who: str) -> str:
+    lines = [
+        f"# {conversation['title']}",
+        "",
+        f"{who} · started {long_time(parse_time(conversation['created_at'], time_zone))}",
+        "",
+    ]
+    for message in messages:
+        speaker = "Visitor" if message["role"] == "user" else "dharshan's lil buddy"
+        when = long_time(parse_time(message["created_at"], time_zone))
+        image_note = f" [{len(message['images'])} image(s) attached]" if message.get("images") else ""
+        lines += [f"**{speaker}** · {when}{image_note}", "", message.get("content", ""), "", "---", ""]
+    return "\n".join(lines)
+
+
+def conversations_csv(
+    conversations: list[dict], messages: list[dict], time_zone: tzinfo, my_visitor_id: str
+) -> bytes:
+    by_id = {conversation["id"]: conversation for conversation in conversations}
+    rows = [
+        {
+            "conversation_id": message["conversation_id"],
+            "title": by_id[message["conversation_id"]]["title"],
+            "visitor": visitor_label(by_id[message["conversation_id"]]["visitor_id"], my_visitor_id),
+            "time": parse_time(message["created_at"], time_zone).strftime("%Y-%m-%d %H:%M:%S"),
+            "role": message["role"],
+            "content": message.get("content", ""),
+            "images_attached": len(message.get("images") or []),
+        }
+        for message in messages
+        if message["conversation_id"] in by_id
+    ]
+    columns = ["conversation_id", "title", "visitor", "time", "role", "content", "images_attached"]
+    return pd.DataFrame(rows, columns=columns).to_csv(index=False).encode("utf-8")
+
+
+def leave_admin() -> None:
+    st.query_params.clear()
+    st.session_state.page = "chat"
+
+
+def render_admin_page(supabase: SupabaseClient, visitor_id: str) -> None:
+    password = get_admin_password()
+    if not password:
+        st.error("The admin page is turned off. Add `ADMIN_PASSWORD` to your Streamlit secrets to turn it on.")
+        st.code('ADMIN_PASSWORD = "pick-a-long-password"', language="toml")
+        st.button("back to chat", on_click=leave_admin)
+        return
+    if not admin_unlocked(password):
+        st.button("back to chat", on_click=leave_admin)
+        return
+
+    st.markdown(ADMIN_CSS, unsafe_allow_html=True)
+    time_zone_name, time_zone = viewer_time_zone()
+    today = datetime.now(time_zone).date()
+
+    try:
+        conversations = admin_conversations(supabase)
+    except Exception as error:
+        st.error("I couldn’t load conversations.")
+        with st.expander("Technical details"):
+            st.code(str(error))
+        return
+
+    visitors: dict[str, int] = {}
+    for conversation in conversations:
+        visitors[conversation["visitor_id"]] = visitors.get(conversation["visitor_id"], 0) + 1
+
+    st.markdown('<div class="brand-kicker">Admin · past 30 days</div>', unsafe_allow_html=True)
+    st.markdown('<h1 class="brand-title">conversations</h1>', unsafe_allow_html=True)
+    st.markdown(
+        f'<p class="brand-subtitle">{len(conversations):,} chats from {len(visitors):,} '
+        f"visitors. Times are shown in {time_zone_name}.</p>",
+        unsafe_allow_html=True,
+    )
+
+    search_column, visitor_column, refresh_column, export_column, lock_column = st.columns(
+        [3.2, 1.8, 0.8, 0.8, 0.8], vertical_alignment="bottom"
+    )
+    with search_column:
+        term = st.text_input(
+            "Search",
+            placeholder="Conversation contains…",
+            key="admin_search",
+            label_visibility="collapsed",
+        ).strip()
+    with visitor_column:
+        visitor_options = ["all"] + sorted(visitors, key=lambda vid: -visitors[vid])
+        visitor_filter = st.selectbox(
+            "Visitor",
+            visitor_options,
+            key="admin_visitor",
+            label_visibility="collapsed",
+            format_func=lambda vid: "All visitors"
+            if vid == "all"
+            else f"{visitor_label(vid, visitor_id)} · {visitors[vid]} chats",
+        )
+    with refresh_column:
+        if st.button("refresh", key="admin_refresh", width="stretch", help="Load the newest chats"):
+            admin_conversations.clear()
+            admin_search.clear()
+            admin_messages.clear()
+            st.rerun()
+
+    shown = conversations
+    if visitor_filter != "all":
+        shown = [c for c in shown if c["visitor_id"] == visitor_filter]
+    if term:
+        try:
+            matches = admin_search(supabase, term)
+        except Exception as error:
+            st.error("Search didn’t work.")
+            with st.expander("Technical details"):
+                st.code(str(error))
+            matches = set()
+        shown = [c for c in shown if c["id"] in matches]
+
+    shown_ids = [c["id"] for c in shown]
+    if st.session_state.get("admin_selected") not in shown_ids:
+        st.session_state.admin_selected = shown_ids[0] if shown_ids else None
+    selected = next((c for c in shown if c["id"] == st.session_state.admin_selected), None)
+    selected_messages = admin_messages(supabase, selected["id"]) if selected else []
+
+    with export_column:
+        with st.popover("export", key="admin_export", width="stretch"):
+            if selected:
+                st.download_button(
+                    "This chat (.md)",
+                    conversation_markdown(
+                        selected,
+                        selected_messages,
+                        time_zone,
+                        visitor_label(selected["visitor_id"], visitor_id),
+                    ),
+                    file_name=f"chat-{selected['id'][:8]}.md",
+                    mime="text/markdown",
+                    width="stretch",
+                )
+            if shown:
+                st.caption(
+                    f"All {len(shown):,} chat{'s' if len(shown) != 1 else ''} in the list as a spreadsheet:"
+                )
+                if st.button("Prepare CSV", width="stretch", key="admin_prepare_csv"):
+                    with st.spinner("Collecting messages…"):
+                        st.session_state.admin_csv = conversations_csv(
+                            shown,
+                            admin_messages_for_export(supabase, shown_ids),
+                            time_zone,
+                            visitor_id,
+                        )
+                if st.session_state.get("admin_csv"):
+                    st.download_button(
+                        "Download CSV",
+                        st.session_state.admin_csv,
+                        file_name=f"lil-buddy-chats-{today.isoformat()}.csv",
+                        mime="text/csv",
+                        type="primary",
+                        width="stretch",
+                    )
+    with lock_column:
+        if st.button("lock", key="admin_lock", width="stretch", help="Lock the admin page and go back to chat"):
+            st.session_state.admin_unlocked = False
+            st.session_state.pop("admin_csv", None)
+            leave_admin()
+            st.rerun()
+
+    list_column, transcript_column = st.columns([2, 3], gap="medium")
+
+    with list_column:
+        with st.container(height=680, key="admin_list"):
+            if not shown:
+                st.caption("No conversations match." if term or visitor_filter != "all" else "No conversations yet.")
+            list_limit = st.session_state.get("admin_list_limit", ADMIN_LIST_PAGE)
+            visible = shown[:list_limit]
+            if selected and selected not in visible:
+                visible.append(selected)
+            for conversation in visible:
+                updated = parse_time(conversation["updated_at"], time_zone)
+                label = (
+                    f"`{conversation['message_count']}` {escape_markdown(conversation['title'])}"
+                    f" *{list_time(updated, today)} · "
+                    f"{visitor_label(conversation['visitor_id'], visitor_id)}*"
+                )
+                if st.button(
+                    label,
+                    key=f"admin_open_{conversation['id']}",
+                    width="stretch",
+                    type="primary" if conversation["id"] == st.session_state.admin_selected else "secondary",
+                ):
+                    st.session_state.admin_selected = conversation["id"]
+                    st.rerun()
+            if len(shown) > list_limit:
+                if st.button(
+                    f"show more ({len(shown) - list_limit:,} left)",
+                    key="admin_show_more",
+                    type="tertiary",
+                    width="stretch",
+                ):
+                    st.session_state.admin_list_limit = list_limit + ADMIN_LIST_PAGE
+                    st.rerun()
+
+    with transcript_column:
+        if not selected:
+            st.caption("Pick a conversation on the left to read it.")
+            return
+        started = parse_time(selected["created_at"], time_zone)
+        st.markdown(
+            f'<p class="admin-transcript-title">{escape_html(selected["title"])}</p>'
+            f'<p class="admin-transcript-meta">{visitor_label(selected["visitor_id"], visitor_id)}'
+            f" · {selected['message_count']} messages · started {long_time(started)}</p>",
+            unsafe_allow_html=True,
+        )
+        with st.container(height=600, key="admin_transcript"):
+            last_day = None
+            for message in selected_messages:
+                sent = parse_time(message["created_at"], time_zone)
+                if sent.date() != last_day:
+                    last_day = sent.date()
+                    st.markdown(
+                        f'<div class="admin-day-divider">{long_time(sent)}</div>',
+                        unsafe_allow_html=True,
+                    )
+                render_message(message, caption=clock(sent))
+
+
+def escape_html(text: str) -> str:
+    return (
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    )
+
+
+# ============================================================
 # APP
 # ============================================================
 
@@ -970,6 +1399,11 @@ except Exception as error:
     st.error("I couldn’t reach saved chat history yet. Run the Supabase schema setup, then reload.")
     with st.expander("Technical details"):
         st.code(str(error))
+    st.stop()
+
+if ADMIN_QUERY_PARAM in st.query_params:
+    render_admin_page(supabase, visitor_id)
+    render_footer()
     st.stop()
 
 saved_ids = {conversation["id"] for conversation in saved_conversations}
@@ -1027,7 +1461,7 @@ with st.sidebar:
         'request form</a>',
         unsafe_allow_html=True,
     )
-    if st.button("analytics", icon="📊", type="primary", key="open_analytics"):
+    if st.button("analytics", type="primary", key="open_analytics"):
         st.session_state.page = "analytics"
         st.rerun()
     st.divider()
