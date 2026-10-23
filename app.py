@@ -1250,18 +1250,19 @@ def fetch_all_rows(build_query) -> list[dict]:
 
 @st.cache_data(ttl=ADMIN_CACHE_SECONDS, show_spinner=False)
 def admin_conversations(_supabase: SupabaseClient) -> list[dict]:
-    """Every saved chat from every visitor, newest first, with its message count."""
+    """Every saved chat from every visitor, newest first, with its message count.
+
+    The counting is done by lil_buddy_admin_conversations (supabase/admin.sql)
+    rather than by a PostgREST `messages(count)` embed. The embed read the
+    message rows to count them, which pulls every base64 image out of TOAST -
+    230 MB of it - and hit the API's statement timeout. Counting inside
+    Postgres never touches the images: ~10 ms instead of >8 s.
+    """
     cutoff = (datetime.now(timezone.utc) - timedelta(days=HISTORY_RETENTION_DAYS)).isoformat()
-    rows = fetch_all_rows(
-        lambda: _supabase.table("conversations")
-        .select("id, title, visitor_id, created_at, updated_at, messages(count)")
-        .gte("updated_at", cutoff)
-        .order("updated_at", desc=True)
-    )
-    for row in rows:
-        counts = row.pop("messages", None) or []
-        row["message_count"] = counts[0]["count"] if counts else 0
-    return rows
+    response = _supabase.rpc(
+        "lil_buddy_admin_conversations", {"p_since": cutoff}
+    ).execute()
+    return response.data or []
 
 
 def like_pattern(term: str) -> str:
