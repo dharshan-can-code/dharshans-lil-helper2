@@ -34,25 +34,102 @@ st.set_page_config(
 )
 
 
+def active_theme() -> str:
+    """Streamlit's own light/dark choice for this visitor.
+
+    This follows the operating system unless the visitor overrode it in the
+    settings menu, so it can disagree with the prefers-color-scheme media
+    query below. It is briefly unknown on the very first run of a session.
+    """
+    try:
+        return st.context.theme.type or ""
+    except Exception:
+        return ""
+
+
+# Every colour in the stylesheet comes from one of these two palettes, so the
+# app can be restyled by editing here rather than hunting through the rules.
+DARK_PALETTE = """
+    color-scheme: dark;
+    --ink: #f8fafc;
+    --strong: #ffffff;
+    --muted: #a9b5c9;
+    --purple: #a78bfa;
+    --pink: #f0abfc;
+    --bg: #0b1020;
+    --glow-1: rgba(124, 58, 237, .24);
+    --glow-2: rgba(236, 72, 153, .13);
+    --surface: rgba(20, 29, 50, .84);
+    --surface-raised: #202c4a;
+    --sidebar-bg: rgba(12, 18, 35, .97);
+    --sidebar-border: rgba(167, 139, 250, .16);
+    --field: #18233d;
+    --field-border: rgba(167, 139, 250, .35);
+    --panel: rgba(12, 18, 35, .55);
+    --popover: #141d32;
+    --border: rgba(148, 163, 184, .14);
+    --line: rgba(148, 163, 184, .16);
+    --placeholder: #8491a8;
+    --footer: #77839a;
+    --welcome-bg: linear-gradient(115deg, rgba(124, 58, 237, .22), rgba(30, 41, 72, .75));
+    --welcome-border: rgba(196, 181, 253, .25);
+    --welcome-ink: #e9e5ff;
+    --shadow: 0 12px 32px rgba(0, 0, 0, .10);
+    --accent-soft: rgba(167, 139, 250, .10);
+    --accent-ring: rgba(167, 139, 250, .35);
+    --up: #4ade80;
+    --down: #f87171;
+"""
+
+LIGHT_PALETTE = """
+    color-scheme: light;
+    --ink: #1b1f33;
+    --strong: #0f1222;
+    --muted: #596179;
+    --purple: #6d28d9;
+    --pink: #a21caf;
+    --bg: #f6f4fc;
+    --glow-1: rgba(124, 58, 237, .10);
+    --glow-2: rgba(236, 72, 153, .07);
+    --surface: rgba(255, 255, 255, .92);
+    --surface-raised: #efeafd;
+    --sidebar-bg: rgba(248, 246, 253, .97);
+    --sidebar-border: rgba(109, 40, 217, .14);
+    --field: #ffffff;
+    --field-border: rgba(109, 40, 217, .28);
+    --panel: rgba(255, 255, 255, .62);
+    --popover: #ffffff;
+    --border: rgba(15, 23, 42, .10);
+    --line: rgba(15, 23, 42, .12);
+    --placeholder: #8a93a8;
+    --footer: #7b8396;
+    --welcome-bg: linear-gradient(115deg, rgba(124, 58, 237, .12), rgba(255, 255, 255, .9));
+    --welcome-border: rgba(109, 40, 217, .22);
+    --welcome-ink: #312352;
+    --shadow: 0 10px 26px rgba(49, 35, 82, .08);
+    --accent-soft: rgba(109, 40, 217, .10);
+    --accent-ring: rgba(109, 40, 217, .30);
+    --up: #15803d;
+    --down: #b91c1c;
+"""
+
+# Dark is the default; the media query follows the device setting.
+st.markdown(
+    "<style>:root{" + DARK_PALETTE + "}"
+    "@media (prefers-color-scheme: light){:root{" + LIGHT_PALETTE + "}}</style>",
+    unsafe_allow_html=True,
+)
+
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
 
-    :root {
-        --ink: #f8fafc;
-        --muted: #a9b5c9;
-        --surface: rgba(20, 29, 50, .84);
-        --surface-raised: #202c4a;
-        --purple: #a78bfa;
-        --pink: #f0abfc;
-    }
-
     .stApp {
         background:
-            radial-gradient(circle at 6% 2%, rgba(124, 58, 237, .24), transparent 30rem),
-            radial-gradient(circle at 96% 16%, rgba(236, 72, 153, .13), transparent 25rem),
-            #0b1020;
+            radial-gradient(circle at 6% 2%, var(--glow-1), transparent 30rem),
+            radial-gradient(circle at 96% 16%, var(--glow-2), transparent 25rem),
+            var(--bg);
         color: var(--ink);
     }
 
@@ -70,8 +147,8 @@ st.markdown(
     h1, h2, h3, p, label, span { color: var(--ink); }
 
     [data-testid="stSidebar"] {
-        background: rgba(12, 18, 35, .97);
-        border-right: 1px solid rgba(167, 139, 250, .16);
+        background: var(--sidebar-bg);
+        border-right: 1px solid var(--sidebar-border);
     }
 
     [data-testid="stSidebar"] > div:first-child { padding-top: 1.4rem; }
@@ -91,7 +168,7 @@ st.markdown(
         letter-spacing: -.065em;
         line-height: 1.04;
         margin: 0;
-        color: #fff;
+        color: var(--strong);
     }
 
     .brand-title em { color: var(--purple); font-style: normal; }
@@ -105,31 +182,31 @@ st.markdown(
     }
 
     .welcome-card {
-        background: linear-gradient(115deg, rgba(124, 58, 237, .22), rgba(30, 41, 72, .75));
-        border: 1px solid rgba(196, 181, 253, .25);
+        background: var(--welcome-bg);
+        border: 1px solid var(--welcome-border);
         border-radius: 18px;
         padding: 1.15rem 1.25rem;
         margin: .5rem 0 1.5rem;
-        color: #e9e5ff;
+        color: var(--welcome-ink);
     }
 
-    .welcome-card strong { color: #fff; }
+    .welcome-card strong { color: var(--strong); }
 
     [data-testid="stChatMessage"] {
         background: var(--surface);
-        border: 1px solid rgba(148, 163, 184, .12);
+        border: 1px solid var(--border);
         border-radius: 16px;
         padding: 1rem 1.1rem;
         margin: .75rem 0;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, .10);
+        box-shadow: var(--shadow);
     }
 
     [data-testid="stChatMessage"][data-testid*="user"] { background: var(--surface-raised); }
     [data-testid="stChatMessage"] p, [data-testid="stChatMessage"] li { line-height: 1.65; }
 
     [data-testid="stChatInput"] {
-        background: #18233d;
-        border: 1px solid rgba(167, 139, 250, .35);
+        background: var(--field);
+        border: 1px solid var(--field-border);
         border-radius: 15px;
     }
 
@@ -138,7 +215,7 @@ st.markdown(
         background: transparent !important;
     }
 
-    [data-testid="stChatInput"] textarea::placeholder, .stTextInput input::placeholder { color: #8491a8 !important; }
+    [data-testid="stChatInput"] textarea::placeholder, .stTextInput input::placeholder { color: var(--placeholder) !important; }
     [data-testid="stChatInput"] button { color: var(--purple) !important; }
 
     .stButton > button {
@@ -160,7 +237,7 @@ st.markdown(
         border: 1px solid transparent;
     }
     [data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {
-        background: rgba(167, 139, 250, .10);
+        background: var(--accent-soft);
         color: var(--ink);
         transform: none;
     }
@@ -190,8 +267,8 @@ st.markdown(
         transform: translateY(-1px);
     }
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] small { color: var(--muted) !important; }
-    hr { border-color: rgba(148, 163, 184, .16) !important; }
-    .footer-note { color: #77839a; text-align: center; font-size: .78rem; margin-top: 2.5rem; }
+    hr { border-color: var(--line) !important; }
+    .footer-note { color: var(--footer); text-align: center; font-size: .78rem; margin-top: 2.5rem; }
 
     .stat-grid {
         display: grid;
@@ -204,7 +281,7 @@ st.markdown(
         align-items: center;
         gap: 1rem;
         background: var(--surface);
-        border: 1px solid rgba(148, 163, 184, .14);
+        border: 1px solid var(--border);
         border-radius: 16px;
         padding: 1.1rem 1.25rem;
     }
@@ -215,7 +292,7 @@ st.markdown(
         width: 2.6rem;
         height: 2.6rem;
         border-radius: 12px;
-        background: rgba(167, 139, 250, .12);
+        background: var(--accent-soft);
         color: var(--purple);
     }
     .stat-body { flex: 1; min-width: 0; }
@@ -227,31 +304,31 @@ st.markdown(
         gap: .75rem;
         margin-top: .15rem;
     }
-    .stat-value { color: #fff; font-size: 1.65rem; font-weight: 800; letter-spacing: -.03em; }
+    .stat-value { color: var(--strong); font-size: 1.65rem; font-weight: 800; letter-spacing: -.03em; }
     .stat-change { font-family: 'DM Mono', monospace; font-size: .85rem; font-weight: 500; }
-    .stat-change.up { color: #4ade80; }
-    .stat-change.down { color: #f87171; }
+    .stat-change.up { color: var(--up); }
+    .stat-change.down { color: var(--down); }
     .stat-change.flat { color: var(--muted); }
     .section-title { color: var(--ink); font-size: 1.1rem; font-weight: 700; margin: 0; }
 
     .st-key-usage_chart {
         background: var(--surface);
-        border: 1px solid rgba(148, 163, 184, .14);
+        border: 1px solid var(--border);
         border-radius: 16px;
         padding: 1.25rem 1rem .75rem;
     }
     /* Selectors cover both older (baseweb) and newer (react-aria) Streamlit widgets. */
     .st-key-analytics_interval [data-baseweb="select"] > div,
     .st-key-analytics_interval [role="group"] {
-        background: #18233d !important;
-        border-color: rgba(167, 139, 250, .35) !important;
+        background: var(--field) !important;
+        border-color: var(--field-border) !important;
     }
     .st-key-analytics_interval input,
     .st-key-analytics_interval [data-baseweb="select"] div { color: var(--ink) !important; }
     .st-key-analytics_interval svg { color: var(--muted); }
     .st-key-analytics_scope button {
-        background: #18233d !important;
-        border-color: rgba(167, 139, 250, .25) !important;
+        background: var(--field) !important;
+        border-color: var(--field-border) !important;
         color: var(--muted) !important;
         font-weight: 600;
     }
@@ -269,6 +346,12 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+_active_theme = active_theme()
+if _active_theme == "light":
+    st.markdown("<style>:root{" + LIGHT_PALETTE + "}</style>", unsafe_allow_html=True)
+elif _active_theme == "dark":
+    st.markdown("<style>:root{" + DARK_PALETTE + "}</style>", unsafe_allow_html=True)
 
 # When text is copied out of a chat message, rewrite the clipboard HTML without the
 # page's white-on-dark styling so it pastes as normal black text (e.g. in Google Docs).
@@ -692,8 +775,27 @@ def render_footer() -> None:
 
 ANALYTICS_DAYS = 30
 CHART_WEEKS = 13
-CHART_PURPLE = "#a78bfa"
-CHART_MUTED = "#a9b5c9"
+CHART_COLORS = {
+    "dark": {
+        "line": "#a78bfa",
+        "muted": "#a9b5c9",
+        "label": "#ffffff",
+        "grid": "rgba(148, 163, 184, .14)",
+        "axis": "rgba(148, 163, 184, .25)",
+    },
+    "light": {
+        "line": "#7c3aed",
+        "muted": "#596179",
+        "label": "#0f1222",
+        "grid": "rgba(15, 23, 42, .12)",
+        "axis": "rgba(15, 23, 42, .22)",
+    },
+}
+
+
+def chart_colors() -> dict[str, str]:
+    """Altair needs real colour values, so the chart picks its own palette."""
+    return CHART_COLORS["light" if active_theme() == "light" else "dark"]
 
 CONVERSATIONS_ICON = (
     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -808,6 +910,7 @@ def chart_rows(usage: dict[date, tuple[int, int]], days: list[date], weekly: boo
 
 
 def conversations_chart(rows: pd.DataFrame, weekly: bool) -> alt.LayerChart:
+    palette = chart_colors()
     hover = alt.selection_point(
         fields=["start"], nearest=True, on="pointerover", clear="pointerout", empty=False
     )
@@ -819,12 +922,12 @@ def conversations_chart(rows: pd.DataFrame, weekly: bool) -> alt.LayerChart:
                 format="%b %-d",
                 tickCount={"interval": "week", "step": 1},
                 grid=False,
-                labelColor=CHART_MUTED,
+                labelColor=palette["muted"],
                 labelFont="Manrope",
                 labelFontSize=12,
                 labelPadding=10,
-                domainColor="rgba(148, 163, 184, .25)",
-                tickColor="rgba(148, 163, 184, .25)",
+                domainColor=palette["axis"],
+                tickColor=palette["axis"],
             ),
         ),
         y=alt.Y(
@@ -837,24 +940,24 @@ def conversations_chart(rows: pd.DataFrame, weekly: bool) -> alt.LayerChart:
                 tickCount=5,
                 domain=False,
                 ticks=False,
-                labelColor=CHART_MUTED,
+                labelColor=palette["muted"],
                 labelFont="Manrope",
                 labelFontSize=12,
                 labelPadding=10,
-                gridColor="rgba(148, 163, 184, .14)",
+                gridColor=palette["grid"],
             ),
         ),
     )
 
-    line = base.mark_line(interpolate="monotone", color=CHART_PURPLE, strokeWidth=2.5)
-    points = base.mark_circle(color=CHART_PURPLE, opacity=1).encode(
+    line = base.mark_line(interpolate="monotone", color=palette["line"], strokeWidth=2.5)
+    points = base.mark_circle(color=palette["line"], opacity=1).encode(
         size=alt.condition(hover, alt.value(140), alt.value(55 if weekly else 30))
     )
-    guide = base.mark_rule(color=CHART_MUTED, strokeDash=[4, 4]).encode(
+    guide = base.mark_rule(color=palette["muted"], strokeDash=[4, 4]).encode(
         opacity=alt.condition(hover, alt.value(0.5), alt.value(0))
     )
     count_label = base.mark_text(
-        dy=-16, color="#fff", font="Manrope", fontSize=13, fontWeight=700
+        dy=-16, color=palette["label"], font="Manrope", fontSize=13, fontWeight=700
     ).encode(text=alt.condition(hover, "conversations:Q", alt.value("")))
     # Invisible points that pick the nearest date anywhere under the pointer.
     hover_targets = (
@@ -958,20 +1061,20 @@ SUPABASE_PAGE_SIZE = 1000
 
 ADMIN_CSS = """
 <style>
-/* Dark inputs and buttons so text stays readable in Streamlit's light theme too. */
+/* Inputs and buttons follow the active palette, same as the rest of the app. */
 [data-testid="stTextInputRootElement"],
 .st-key-admin_visitor [role="group"],
 .st-key-admin_visitor [data-baseweb="select"] > div {
-    background: #18233d !important;
-    border-color: rgba(167, 139, 250, .35) !important;
+    background: var(--field) !important;
+    border-color: var(--field-border) !important;
 }
 [data-testid="stTextInputRootElement"] input,
 .st-key-admin_visitor input,
 .st-key-admin_visitor [data-baseweb="select"] div { color: var(--ink) !important; }
 .st-key-admin_visitor svg, [data-testid="stTextInputRootElement"] button { color: var(--muted) !important; }
 .st-key-admin_refresh button, .st-key-admin_lock button, .st-key-admin_export button {
-    background: #18233d !important;
-    border: 1px solid rgba(167, 139, 250, .35) !important;
+    background: var(--field) !important;
+    border: 1px solid var(--field-border) !important;
     color: var(--ink) !important;
     font-weight: 600;
 }
@@ -979,13 +1082,13 @@ ADMIN_CSS = """
     border-color: var(--purple) !important;
     transform: none;
 }
-[data-testid="stPopoverBody"] { background: #141d32 !important; }
+[data-testid="stPopoverBody"] { background: var(--popover) !important; }
 .main .block-container,
 [data-testid="stMainBlockContainer"] { max-width: 1400px !important; }
 
 .st-key-admin_list, .st-key-admin_transcript {
-    background: rgba(12, 18, 35, .55);
-    border: 1px solid rgba(148, 163, 184, .14);
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: 16px;
 }
 .st-key-admin_list .stButton > button {
@@ -995,18 +1098,18 @@ ADMIN_CSS = """
     text-align: left;
     padding: .65rem .9rem;
     background: var(--surface);
-    border: 1px solid rgba(148, 163, 184, .14);
+    border: 1px solid var(--border);
     border-radius: 12px;
     color: var(--ink);
     font-weight: 600;
 }
 .st-key-admin_list .stButton > button:hover {
-    background: rgba(167, 139, 250, .12);
-    border-color: rgba(167, 139, 250, .35);
+    background: var(--accent-soft);
+    border-color: var(--accent-ring);
     transform: none;
 }
 .st-key-admin_list .stButton > button[kind="primary"] {
-    background: rgba(124, 58, 237, .22);
+    background: var(--accent-soft);
     border-color: var(--purple);
 }
 .st-key-admin_list .stButton > button div,
@@ -1047,7 +1150,7 @@ ADMIN_CSS = """
     border-style: dashed;
     color: var(--purple);
 }
-.admin-transcript-title { color: #fff; font-size: 1.25rem; font-weight: 800; margin: 0 0 .25rem; }
+.admin-transcript-title { color: var(--strong); font-size: 1.25rem; font-weight: 800; margin: 0 0 .25rem; }
 .admin-transcript-meta { color: var(--muted); font-size: .85rem; margin: 0 0 .75rem; }
 .admin-day-divider {
     color: var(--muted);
