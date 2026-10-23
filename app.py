@@ -113,10 +113,16 @@ LIGHT_PALETTE = """
     --down: #b91c1c;
 """
 
-# Dark is the default; the media query follows the device setting.
+# Dark is the default and the media query follows the device. Once the
+# observer further down has read Streamlit's own theme, the [data-lil-theme]
+# rules take over: they are more specific, so they win over both of the above.
 st.markdown(
-    "<style>:root{" + DARK_PALETTE + "}"
-    "@media (prefers-color-scheme: light){:root{" + LIGHT_PALETTE + "}}</style>",
+    "<style>"
+    ":root{" + DARK_PALETTE + "}"
+    "@media (prefers-color-scheme: light){:root{" + LIGHT_PALETTE + "}}"
+    "html[data-lil-theme='dark']{" + DARK_PALETTE + "}"
+    "html[data-lil-theme='light']{" + LIGHT_PALETTE + "}"
+    "</style>",
     unsafe_allow_html=True,
 )
 
@@ -136,6 +142,14 @@ st.markdown(
     [data-testid="stHeader"], [data-testid="stHeader"] > div {
         background: transparent;
     }
+
+    /* .stApp stops short of the fixed chat bar, so the canvas shows through at
+       the foot of the page. Painting <body> covers it. Only the background is
+       set here: the observer below reads body's text colour, not its fill. */
+    body { background: var(--bg); }
+    /* Matched by structure, not by the generated class name, which changes
+       between Streamlit builds. */
+    [data-testid="stBottom"], [data-testid="stBottom"] > div { background: transparent; }
 
     .main .block-container {
         max-width: 1050px;
@@ -347,11 +361,53 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-_active_theme = active_theme()
-if _active_theme == "light":
-    st.markdown("<style>:root{" + LIGHT_PALETTE + "}</style>", unsafe_allow_html=True)
-elif _active_theme == "dark":
-    st.markdown("<style>:root{" + DARK_PALETTE + "}</style>", unsafe_allow_html=True)
+# Mirror Streamlit's active theme onto <html data-lil-theme>. Streamlit paints
+# its own widgets from a theme it never exposes as an attribute, so the only
+# dependable signal is the text colour it gives the page body - which this
+# stylesheet never sets. (Body's background is ours; its colour is Streamlit's.)
+components.html(
+    r"""
+    <script>
+        const doc = window.parent.document;
+        const root = doc.documentElement;
+
+        const sync = () => {
+            const parts = getComputedStyle(doc.body).color.match(/[\d.]+/g);
+            if (!parts || parts.length < 3) return;
+            const [r, g, b] = parts.map(Number);
+            // Rec. 601 luma of the body TEXT: pale text means a dark theme.
+            const next = (0.299 * r + 0.587 * g + 0.114 * b) > 128 ? 'dark' : 'light';
+            if (root.getAttribute('data-lil-theme') !== next) {
+                root.setAttribute('data-lil-theme', next);
+            }
+        };
+
+        sync();
+
+        // Streamlit restyles by swapping generated class names on the app
+        // container and injecting <style> tags, so watch both.
+        if (doc.__lilBuddyThemeWatcher) doc.__lilBuddyThemeWatcher.disconnect();
+        doc.__lilBuddyThemeWatcher = new MutationObserver(sync);
+        const app = doc.querySelector('[data-testid="stApp"]');
+        if (app) {
+            doc.__lilBuddyThemeWatcher.observe(app, {
+                attributes: true, attributeFilter: ['class', 'style'],
+            });
+        }
+        doc.__lilBuddyThemeWatcher.observe(doc.head, { childList: true });
+
+        // A device-level switch repaints Streamlit a tick later than the event.
+        if (!doc.__lilBuddyThemeMedia) {
+            doc.__lilBuddyThemeMedia = window.parent.matchMedia('(prefers-color-scheme: dark)');
+            doc.__lilBuddyThemeMedia.addEventListener('change', () => {
+                setTimeout(sync, 60);
+                setTimeout(sync, 400);
+            });
+        }
+    </script>
+    """,
+    height=0,
+)
 
 # When text is copied out of a chat message, rewrite the clipboard HTML without the
 # page's white-on-dark styling so it pastes as normal black text (e.g. in Google Docs).
