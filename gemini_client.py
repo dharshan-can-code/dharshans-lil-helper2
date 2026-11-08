@@ -15,6 +15,7 @@ Messages use Ollama's format: {"role": "system" | "user" | "assistant", "content
 """
 
 import base64
+import time
 from types import SimpleNamespace
 
 from google import genai
@@ -77,8 +78,24 @@ def _convert(messages):
     return "\n\n".join(system_parts) or None, contents
 
 
+# If the chosen model is busy (503) or out of free quota (429), try these next.
+# Free limits are counted per model, so a different model usually still has room.
+FALLBACK_MODELS = ("gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite")
+RETRYABLE_CODES = {429, 500, 503, 504}
+
+
+def _models_to_try(model):
+    return [model] + [m for m in FALLBACK_MODELS if m != model]
+
+
+def _should_try_next(error):
+    return getattr(error, "code", None) in RETRYABLE_CODES
+
+
 def _friendly_error(error):
     code = getattr(error, "code", None)
+    if code in (500, 503, 504):
+        return ResponseError("The AI is very busy right now. Please try again in a moment.", code)
     if code == 429:
         return ResponseError(
             "The free AI limit has been reached for now. Please try again in a few minutes.", 429
@@ -105,17 +122,36 @@ class Client:
         )
         if stream:
             return self._stream(model, contents, config)
-        try:
-            response = self._client.models.generate_content(model=model, contents=contents, config=config)
-        except errors.APIError as error:
-            raise _friendly_error(error) from error
-        return _wrap(response.text)
+
+        last_error = None
+        for name in _models_to_try(model):
+            try:
+                response = self._client.models.generate_content(model=name, contents=contents, config=config)
+                return _wrap(response.text)
+            except errors.APIError as error:
+                if not _should_try_next(error):
+                    raise _friendly_error(error) from error
+                print(f"Gemini {name} unavailable ({getattr(error, 'code', '?')}), trying the next model")
+                last_error = error
+                time.sleep(0.5)
+        raise _friendly_error(last_error) from last_error
 
     def _stream(self, model, contents, config):
-        try:
-            for chunk in self._client.models.generate_content_stream(model=model, contents=contents, config=config):
-                text = chunk.text
-                if text:
-                    yield _wrap(text)
-        except errors.APIError as error:
-            raise _friendly_error(error) from error
+        last_error = None
+        for name in _models_to_try(model):
+            started = False
+            try:
+                for chunk in self._client.models.generate_content_stream(model=name, contents=contents, config=config):
+                    text = chunk.text
+                    if text:
+                        started = True
+                        yield _wrap(text)
+                return
+            except errors.APIError as error:
+                # Once part of a reply has been shown, switching models would mix two answers.
+                if started or not _should_try_next(error):
+                    raise _friendly_error(error) from error
+                print(f"Gemini {name} unavailable ({getattr(error, 'code', '?')}), trying the next model")
+                last_error = error
+                time.sleep(0.5)
+        raise _friendly_error(last_error) from last_error
