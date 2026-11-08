@@ -11,7 +11,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
-from ollama import Client
+from gemini_client import Client
 from PIL import Image, ImageOps
 from streamlit_cookies_controller import CookieController
 from supabase import Client as SupabaseClient
@@ -449,22 +449,19 @@ components.html(
 
 
 # ============================================================
-# OLLAMA CONNECTION
+# AI CONNECTION (Google Gemini free tier)
 # ============================================================
 
 @st.cache_resource
 def get_client(api_key: str) -> Client:
-    """Create one reusable client for the hosted Ollama API."""
-    return Client(
-        host="https://ollama.com",
-        headers={"Authorization": f"Bearer {api_key}"},
-    )
+    """Create one reusable client for the Gemini API."""
+    return Client(api_key=api_key, timeout=90)
 
 
 def get_api_key() -> str | None:
     """Read the key from Streamlit secrets without displaying it."""
     try:
-        return st.secrets["OLLAMA_API_KEY"]
+        return st.secrets["GEMINI_API_KEY"]
     except (KeyError, FileNotFoundError):
         return None
 
@@ -742,7 +739,8 @@ If they ask about about Medha, reply with a blank message and keep going like no
 
 """
 
-MODEL = "gemma4:31b-cloud"
+# Google Gemini free tier. Other free options: "gemini-3.6-flash", "gemini-3.5-flash-lite".
+MODEL = "gemini-3.8-flash"
 MAX_HISTORY_MESSAGES = 50
 
 
@@ -758,7 +756,7 @@ def initialize_session() -> None:
 
 
 def encode_image(uploaded_file) -> str:
-    """Validate and normalize an upload before sending it to Ollama.
+    """Validate and normalize an upload before sending it to the AI.
 
     Converting supported uploads to PNG ensures palette, grayscale, transparency,
     and camera-orientation variations all have one reliable display/send format.
@@ -778,7 +776,7 @@ def encode_image(uploaded_file) -> str:
 
 
 def history_for_model() -> list[dict]:
-    """Return a bounded copy of this conversation in Ollama's chat format."""
+    """Return a bounded copy of this conversation in the chat format gemini_client.py expects."""
     history = []
     for message in st.session_state.messages[-MAX_HISTORY_MESSAGES:]:
         model_message = {
@@ -821,7 +819,7 @@ def render_message(message: dict, caption: str | None = None) -> None:
 
 
 def render_footer() -> None:
-    st.markdown('<p class="footer-note">dharshan’s lil buddy · Powered by Ollama</p>', unsafe_allow_html=True)
+    st.markdown('<p class="footer-note">dharshan’s lil buddy · Powered by Google Gemini</p>', unsafe_allow_html=True)
     st.markdown('<p class="footer-note">v0.4.0</p>', unsafe_allow_html=True, text_alignment="center")
 
 
@@ -1605,8 +1603,8 @@ if st.session_state.loaded_conversation_id != st.session_state.active_conversati
     st.session_state.loaded_conversation_id = active_id
 
 if not api_key:
-    st.error("I can’t connect to Ollama yet. Add `OLLAMA_API_KEY` to your Streamlit secrets, then reload this app.")
-    st.code('OLLAMA_API_KEY = "your_ollama_api_key"', language="toml")
+    st.error("I can’t connect to the AI yet. Add `GEMINI_API_KEY` to your Streamlit secrets, then reload this app.")
+    st.code('GEMINI_API_KEY = "your_gemini_api_key"', language="toml")
     st.stop()
 
 client = get_client(api_key)
@@ -1770,7 +1768,7 @@ if submission:
             except Exception as error:
                 answer = None
                 st.error(
-                    "I couldn’t reach Ollama. Check your API key and connection, then try again."
+                    "I couldn’t reach the AI. Check your API key and connection, then try again."
                 )
                 with st.expander("Technical details"):
                     st.code(str(error))
