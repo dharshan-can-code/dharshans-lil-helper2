@@ -1,0 +1,8 @@
+# Streamlit's own accent colour (focus outlines, links, highlighted options).
+# Grey in both modes to match the monotone app; visitors still get light or
+# dark automatically, following their device.
+[theme.light]
+primaryColor = "#18181b"
+
+[theme.dark]
+primaryColor = "#e4e4e7"

@@ -47,78 +47,112 @@ def active_theme() -> str:
         return ""
 
 
-# Every colour in the stylesheet comes from one of these two palettes, so the
+# Every colour in the stylesheet comes from one of these two palettes (both
+# monotone: greys only), so the
 # app can be restyled by editing here rather than hunting through the rules.
 DARK_PALETTE = """
     color-scheme: dark;
-    --ink: #f8fafc;
+    --ink: #f4f4f5;
     --strong: #ffffff;
-    --muted: #a9b5c9;
-    --purple: #a78bfa;
-    --pink: #f0abfc;
-    --bg: #0b1020;
-    --glow-1: rgba(124, 58, 237, .24);
-    --glow-2: rgba(236, 72, 153, .13);
-    --surface: rgba(20, 29, 50, .84);
-    --surface-raised: #202c4a;
-    --sidebar-bg: rgba(12, 18, 35, .97);
-    --sidebar-border: rgba(167, 139, 250, .16);
-    --field: #18233d;
-    --field-border: rgba(167, 139, 250, .35);
-    --panel: rgba(12, 18, 35, .55);
-    --popover: #141d32;
-    --border: rgba(148, 163, 184, .14);
-    --line: rgba(148, 163, 184, .16);
-    --placeholder: #8491a8;
-    --footer: #77839a;
-    --welcome-bg: linear-gradient(115deg, rgba(124, 58, 237, .22), rgba(30, 41, 72, .75));
-    --welcome-border: rgba(196, 181, 253, .25);
-    --welcome-ink: #e9e5ff;
+    --muted: #a1a1aa;
+    --purple: #e4e4e7;
+    --pink: #d4d4d8;
+    --bg: #0a0a0a;
+    --glow-1: rgba(255, 255, 255, .06);
+    --glow-2: rgba(255, 255, 255, .035);
+    --surface: rgba(24, 24, 27, .84);
+    --surface-raised: #27272a;
+    --sidebar-bg: rgba(10, 10, 11, .3);
+    --sidebar-border: rgba(255, 255, 255, .10);
+    --field: #18181b;
+    --field-border: rgba(255, 255, 255, .22);
+    --panel: rgba(12, 12, 13, .55);
+    --popover: #18181b;
+    --border: rgba(255, 255, 255, .10);
+    --line: rgba(255, 255, 255, .12);
+    --placeholder: #71717a;
+    --footer: #71717a;
+    --welcome-bg: linear-gradient(115deg, rgba(255, 255, 255, .08), rgba(39, 39, 42, .75));
+    --welcome-border: rgba(255, 255, 255, .16);
+    --welcome-ink: #e4e4e7;
     --shadow: 0 12px 32px rgba(0, 0, 0, .10);
-    --accent-soft: rgba(167, 139, 250, .10);
-    --accent-ring: rgba(167, 139, 250, .35);
-    --up: #4ade80;
-    --down: #f87171;
+    --accent-soft: rgba(255, 255, 255, .07);
+    --accent-ring: rgba(255, 255, 255, .28);
+    --up: #f4f4f5;
+    --down: #a1a1aa;
+    --btn: #f4f4f5;
+    --btn-hover: #ffffff;
+    --btn-ink: #0a0a0a;
+    --glass: rgba(255, 255, 255, .06);
+    --glass-hover: rgba(255, 255, 255, .11);
+    --glass-pressed: rgba(255, 255, 255, .08);
+    --glass-ink: #f4f4f5;
+    --glass-rim: 0 0 8px rgba(0, 0, 0, .03), 0 2px 6px rgba(0, 0, 0, .08),
+        inset 3px 3px .5px -3.5px rgba(255, 255, 255, .09), inset -3px -3px .5px -3.5px rgba(255, 255, 255, .85),
+        inset 1px 1px 1px -.5px rgba(255, 255, 255, .6), inset -1px -1px 1px -.5px rgba(255, 255, 255, .6),
+        inset 0 0 6px 6px rgba(255, 255, 255, .12), inset 0 0 2px 2px rgba(255, 255, 255, .06),
+        0 0 12px rgba(0, 0, 0, .15);
+    --glass-rim-soft: inset 1px 1px 1px -.5px rgba(255, 255, 255, .45),
+        inset -1px -1px 1px -.5px rgba(255, 255, 255, .45), inset 0 0 4px 2px rgba(255, 255, 255, .06);
+    --glass-pressed-rim: inset 0 1px 3px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .08);
 """
 
 LIGHT_PALETTE = """
     color-scheme: light;
-    --ink: #1b1f33;
-    --strong: #0f1222;
-    --muted: #596179;
-    --purple: #6d28d9;
-    --pink: #a21caf;
-    --bg: #f6f4fc;
-    --glow-1: rgba(124, 58, 237, .10);
-    --glow-2: rgba(236, 72, 153, .07);
+    --ink: #18181b;
+    --strong: #09090b;
+    --muted: #52525b;
+    --purple: #27272a;
+    --pink: #3f3f46;
+    --bg: #f5f5f5;
+    --glow-1: rgba(0, 0, 0, .045);
+    --glow-2: rgba(0, 0, 0, .03);
     --surface: rgba(255, 255, 255, .92);
-    --surface-raised: #efeafd;
-    --sidebar-bg: rgba(248, 246, 253, .97);
-    --sidebar-border: rgba(109, 40, 217, .14);
+    --surface-raised: #ececee;
+    --sidebar-bg: rgba(250, 250, 250, .35);
+    --sidebar-border: rgba(0, 0, 0, .08);
     --field: #ffffff;
-    --field-border: rgba(109, 40, 217, .28);
+    --field-border: rgba(0, 0, 0, .20);
     --panel: rgba(255, 255, 255, .62);
     --popover: #ffffff;
-    --border: rgba(15, 23, 42, .10);
-    --line: rgba(15, 23, 42, .12);
-    --placeholder: #8a93a8;
-    --footer: #7b8396;
-    --welcome-bg: linear-gradient(115deg, rgba(124, 58, 237, .12), rgba(255, 255, 255, .9));
-    --welcome-border: rgba(109, 40, 217, .22);
-    --welcome-ink: #312352;
-    --shadow: 0 10px 26px rgba(49, 35, 82, .08);
-    --accent-soft: rgba(109, 40, 217, .10);
-    --accent-ring: rgba(109, 40, 217, .30);
-    --up: #15803d;
-    --down: #b91c1c;
+    --border: rgba(0, 0, 0, .09);
+    --line: rgba(0, 0, 0, .11);
+    --placeholder: #8a8a93;
+    --footer: #7a7a83;
+    --welcome-bg: linear-gradient(115deg, rgba(0, 0, 0, .05), rgba(255, 255, 255, .9));
+    --welcome-border: rgba(0, 0, 0, .12);
+    --welcome-ink: #27272a;
+    --shadow: 0 10px 26px rgba(0, 0, 0, .06);
+    --accent-soft: rgba(0, 0, 0, .05);
+    --accent-ring: rgba(0, 0, 0, .25);
+    --up: #18181b;
+    --down: #71717a;
+    --btn: #18181b;
+    --btn-hover: #3f3f46;
+    --btn-ink: #ffffff;
+    --glass: rgba(255, 255, 255, .55);
+    --glass-hover: rgba(255, 255, 255, .8);
+    --glass-pressed: rgba(0, 0, 0, .05);
+    --glass-ink: #18181b;
+    --glass-rim: 0 0 6px rgba(0, 0, 0, .03), 0 2px 6px rgba(0, 0, 0, .08),
+        inset 3px 3px .5px -3px rgba(0, 0, 0, .9), inset -3px -3px .5px -3px rgba(0, 0, 0, .85),
+        inset 1px 1px 1px -.5px rgba(0, 0, 0, .6), inset -1px -1px 1px -.5px rgba(0, 0, 0, .6),
+        inset 0 0 6px 6px rgba(0, 0, 0, .12), inset 0 0 2px 2px rgba(0, 0, 0, .06),
+        0 0 12px rgba(255, 255, 255, .15);
+    --glass-rim-soft: inset 1px 1px 1px -.5px rgba(0, 0, 0, .3),
+        inset -1px -1px 1px -.5px rgba(0, 0, 0, .3), inset 0 0 4px 2px rgba(0, 0, 0, .04);
+    --glass-pressed-rim: inset 0 1px 3px rgba(0, 0, 0, .14), inset 0 0 0 1px rgba(0, 0, 0, .06);
 """
 
 # Dark is the default and the media query follows the device. Once the
 # observer further down has read Streamlit's own theme, the [data-lil-theme]
 # rules take over: they are more specific, so they win over both of the above.
+# Every button uses this one corner radius (999px = fully round ends).
+BUTTON_RADIUS = "999px"
+
 st.markdown(
     "<style>"
-    ":root{" + DARK_PALETTE + "}"
+    ":root{--btn-radius:" + BUTTON_RADIUS + ";" + DARK_PALETTE + "}"
     "@media (prefers-color-scheme: light){:root{" + LIGHT_PALETTE + "}}"
     "html[data-lil-theme='dark']{" + DARK_PALETTE + "}"
     "html[data-lil-theme='light']{" + LIGHT_PALETTE + "}"
@@ -137,6 +171,9 @@ st.markdown(
             radial-gradient(circle at 96% 16%, var(--glow-2), transparent 25rem),
             var(--bg);
         color: var(--ink);
+        /* Own stacking context, so the wave canvas (z-index -1) paints above
+           this background but below every part of the app. */
+        isolation: isolate;
     }
 
     [data-testid="stHeader"], [data-testid="stHeader"] > div {
@@ -163,6 +200,16 @@ st.markdown(
     [data-testid="stSidebar"] {
         background: var(--sidebar-bg);
         border-right: 1px solid var(--sidebar-border);
+    }
+    /* See-through so the wave background runs under the sidebar too. On small
+       screens the sidebar slides over the chat, so it is frosted there instead. */
+    [data-testid="stSidebar"] > div { background: transparent; }
+    @media (max-width: 768px) {
+        [data-testid="stSidebar"] {
+            background: var(--popover);
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+        }
     }
 
     [data-testid="stSidebar"] > div:first-child { padding-top: 1.4rem; }
@@ -216,6 +263,15 @@ st.markdown(
     }
 
     [data-testid="stChatMessage"][data-testid*="user"] { background: var(--surface-raised); }
+    /* Monotone: grey out things that bring their own colour - alert boxes and
+       code highlighting. The logo, emoji avatars and photos people attach keep
+       their colour. */
+    [data-testid="stAlert"],
+    [data-testid="stCode"],
+    .stMarkdown pre { filter: grayscale(1); }
+    ::selection { background: var(--accent-ring); }
+    [data-testid="stMarkdownContainer"] a,
+    [data-testid="stMarkdownContainer"] a:visited { color: var(--ink); text-decoration: underline; }
     [data-testid="stChatMessage"] p, [data-testid="stChatMessage"] li { line-height: 1.65; }
 
     [data-testid="stChatInput"] {
@@ -233,14 +289,16 @@ st.markdown(
     [data-testid="stChatInput"] button { color: var(--purple) !important; }
 
     .stButton > button {
-        background: #7c3aed;
-        color: #fff;
+        background: var(--btn);
+        color: var(--btn-ink);
         border: 0;
-        border-radius: 10px;
+        border-radius: var(--btn-radius);
         font-weight: 700;
         transition: transform .15s ease, background .15s ease;
     }
-    .stButton > button:hover { background: #8b5cf6; color: #fff; transform: translateY(-1px); }
+    .stButton > button:hover { background: var(--btn-hover); color: var(--btn-ink); transform: translateY(-1px); }
+    /* Button labels take the button's colour, not the page text colour. */
+    .stButton > button :is(p, span, div), .stDownloadButton > button :is(p, span, div) { color: inherit; }
 
     [data-testid="stSidebar"] .stButton > button[kind="secondary"] {
         background: transparent;
@@ -264,22 +322,28 @@ st.markdown(
         box-sizing: border-box;
         align-items: center;
         justify-content: center;
+        gap: .4rem;
         padding: .25rem .75rem;
-        border-radius: 10px;
-        background: #7c3aed;
-        color: #fff !important;
+        border: 1px solid var(--field-border);
+        border-radius: var(--btn-radius);
+        background: transparent;
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+        color: var(--ink) !important;
         font-family: 'Manrope', sans-serif;
         font-size: .875rem;
         font-weight: 700;
         text-align: center;
         text-decoration: none !important;
-        transition: transform .15s ease, background .15s ease;
+        transition: background .2s ease, border-color .2s ease;
     }
+    .request-form-button::after { content: "↗"; transition: transform .2s ease; }
     .request-form-button:hover {
-        background: #8b5cf6;
-        color: #fff !important;
-        transform: translateY(-1px);
+        background: var(--glass);
+        border-color: var(--accent-ring);
+        color: var(--ink) !important;
     }
+    .request-form-button:hover::after { transform: translate(2px, -2px); }
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] small { color: var(--muted) !important; }
     hr { border-color: var(--line) !important; }
     .footer-note { color: var(--footer); text-align: center; font-size: .78rem; margin-top: 2.5rem; }
@@ -348,13 +412,180 @@ st.markdown(
     }
     .st-key-analytics_scope button[aria-checked="true"],
     .st-key-analytics_scope button[kind$="Active"] {
-        background: #7c3aed !important;
-        border-color: #7c3aed !important;
-        color: #fff !important;
+        background: var(--btn) !important;
+        border-color: var(--btn) !important;
+        color: var(--btn-ink) !important;
     }
     .st-key-analytics_scope button p { color: inherit !important; }
     .st-key-open_analytics, .st-key-open_analytics .stButton, .st-key-open_analytics button {
         width: 100% !important;
+    }
+
+    /* ============================================================
+       BUTTONS: one look per job, all in the liquid-glass family.
+         new chat ............ big liquid glass (warped glass + full rim)
+         analytics ........... smaller frosted glass (navigation)
+         request form ........ clear glass outline with an arrow (opens a site)
+         saved chats ......... ghost rows; the open chat sits in pressed glass
+         delete this chat .... dashed outline that turns solid on hover
+         send (chat box) ..... round glass bubble
+         stats toggle ........ glass track with a raised glass chip
+         admin tools ......... brushed-metal buttons (see ADMIN_CSS)
+       The warped look uses the #lil-glass SVG filter added to the page by the
+       wave script; browsers that can't use it fall back to a plain frost.
+       ============================================================ */
+
+    /* Sidebar buttons span the sidebar. */
+    [data-testid="stSidebar"] :is(.st-key-new_chat, .st-key-delete_chat, [class*="st-key-open_"]),
+    [data-testid="stSidebar"] :is(.st-key-new_chat, .st-key-delete_chat, [class*="st-key-open_"]) .stButton,
+    [data-testid="stSidebar"] :is(.st-key-new_chat, .st-key-delete_chat, [class*="st-key-open_"]) button {
+        width: 100% !important;
+    }
+
+    /* Sidebar button labels follow their button (the sidebar's grey text rule
+       would otherwise win), and saved-chat titles line up on the left. */
+    [data-testid="stSidebar"] .stButton button :is(p, span, div) { color: inherit !important; }
+    [data-testid="stSidebar"] [class*="st-key-open_"]:not(.st-key-open_analytics) button :is(div, p) {
+        justify-content: flex-start;
+        text-align: left;
+        width: 100%;
+    }
+
+    /* new chat: the main action */
+    [data-testid="stSidebar"] .st-key-new_chat .stButton > button {
+        position: relative;
+        isolation: isolate;
+        min-height: 3rem;
+        border: 0;
+        border-radius: var(--btn-radius);
+        background: transparent;
+        color: var(--glass-ink);
+        font-weight: 800;
+        letter-spacing: .01em;
+        transition: transform .3s ease;
+    }
+    [data-testid="stSidebar"] .st-key-new_chat .stButton > button::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        border-radius: inherit;
+        background: var(--glass);
+        -webkit-backdrop-filter: blur(6px) saturate(160%);
+        backdrop-filter: blur(6px) saturate(160%);
+        backdrop-filter: url(#lil-glass) saturate(160%);
+    }
+    [data-testid="stSidebar"] .st-key-new_chat .stButton > button::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: var(--glass-rim);
+        pointer-events: none;
+    }
+    [data-testid="stSidebar"] .st-key-new_chat .stButton > button:hover {
+        background: transparent;
+        color: var(--glass-ink);
+        transform: scale(1.04);
+    }
+    [data-testid="stSidebar"] .st-key-new_chat .stButton > button:active { transform: scale(.98); }
+
+    /* analytics: navigation, quieter frosted glass */
+    [data-testid="stSidebar"] .st-key-open_analytics .stButton > button {
+        min-height: 2.5rem;
+        border: 0;
+        border-radius: var(--btn-radius);
+        background: var(--glass);
+        -webkit-backdrop-filter: blur(8px) saturate(150%);
+        backdrop-filter: blur(8px) saturate(150%);
+        box-shadow: var(--glass-rim-soft);
+        color: var(--glass-ink);
+        font-weight: 700;
+        transition: background .2s ease, box-shadow .2s ease;
+    }
+    [data-testid="stSidebar"] .st-key-open_analytics .stButton > button:hover {
+        background: var(--glass-hover);
+        box-shadow: var(--glass-rim);
+        color: var(--glass-ink);
+        transform: none;
+    }
+
+    /* saved chats: list rows, glass only when hovered or open */
+    [data-testid="stSidebar"] [class*="st-key-open_"]:not(.st-key-open_analytics) .stButton > button {
+        min-height: 2.35rem;
+        border: 0;
+        border-radius: var(--btn-radius);
+        background: transparent;
+        box-shadow: none;
+        color: var(--muted);
+        font-weight: 500;
+        justify-content: flex-start;
+        text-align: left;
+        transition: background .2s ease, box-shadow .2s ease, color .2s ease;
+    }
+    [data-testid="stSidebar"] [class*="st-key-open_"]:not(.st-key-open_analytics) .stButton > button:hover {
+        background: var(--glass);
+        box-shadow: var(--glass-rim-soft);
+        color: var(--ink);
+        transform: none;
+    }
+    [data-testid="stSidebar"] [class*="st-key-open_"]:not(.st-key-open_analytics) .stButton > button[kind="primary"] {
+        background: var(--glass-pressed);
+        box-shadow: var(--glass-pressed-rim);
+        color: var(--strong);
+        font-weight: 700;
+    }
+
+    /* delete this chat: careful action */
+    [data-testid="stSidebar"] .st-key-delete_chat .stButton > button {
+        min-height: 2.4rem;
+        border: 1px dashed var(--field-border);
+        border-radius: var(--btn-radius);
+        background: transparent;
+        color: var(--muted);
+        font-weight: 600;
+        justify-content: center;
+        transition: background .2s ease, color .2s ease, border-color .2s ease;
+    }
+    [data-testid="stSidebar"] .st-key-delete_chat .stButton > button:hover {
+        border-style: solid;
+        border-color: var(--btn);
+        background: var(--btn);
+        color: var(--btn-ink);
+        transform: none;
+    }
+
+    /* send button inside the chat box: a small glass bubble */
+    [data-testid="stChatInput"] button {
+        border-radius: 999px !important;
+        background: var(--glass) !important;
+        box-shadow: var(--glass-rim-soft);
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+    [data-testid="stChatInput"] button:hover:not(:disabled) {
+        transform: scale(1.08);
+        box-shadow: var(--glass-rim);
+    }
+
+    /* stats toggle on the analytics page: glass track, raised glass chip */
+    .st-key-analytics_scope [role="radiogroup"], .st-key-analytics_scope [data-baseweb="button-group"] {
+        padding: 3px;
+        border-radius: var(--btn-radius);
+        background: var(--glass);
+        box-shadow: var(--glass-pressed-rim);
+    }
+    .st-key-analytics_scope button {
+        background: transparent !important;
+        border-color: transparent !important;
+        border-radius: var(--btn-radius) !important;
+        box-shadow: none;
+    }
+    .st-key-analytics_scope button[aria-checked="true"],
+    .st-key-analytics_scope button[kind$="Active"] {
+        background: var(--glass-hover) !important;
+        border-color: transparent !important;
+        box-shadow: var(--glass-rim-soft);
+        color: var(--strong) !important;
     }
     </style>
     """,
@@ -447,6 +678,208 @@ components.html(
     height=0,
 )
 
+
+# Animated background: a field of dots rolling like a slow sea, ported from the
+# "Wave Mesh" React component to plain JavaScript. Moving the pointer lifts a soft
+# hill under it; clicking sends a ripple across the field. It follows the light /
+# dark theme above and stays still for visitors who ask for reduced motion.
+#
+# The code is copied into the main page and runs there, not in this component's
+# own frame, so it keeps running when Streamlit rebuilds or removes the frame on
+# a rerun. A flag on the page stops it from starting twice.
+components.html(
+    r"""
+    <script>
+    function lilBuddyWaves() {
+        if (window.__lilBuddyWaves) return;
+        window.__lilBuddyWaves = true;
+
+        // The "liquid glass" filter the new chat button uses (CSS: url(#lil-glass)):
+        // noise that bends whatever is behind the button, then softens it.
+        if (!document.getElementById('lil-glass-defs')) {
+            const holder = document.createElement('div');
+            holder.id = 'lil-glass-defs';
+            holder.setAttribute('aria-hidden', 'true');
+            holder.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+            holder.innerHTML =
+                '<svg width="0" height="0"><defs>' +
+                '<filter id="lil-glass" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">' +
+                '<feTurbulence type="fractalNoise" baseFrequency="0.05 0.05" numOctaves="1" seed="1" result="turbulence"/>' +
+                '<feGaussianBlur in="turbulence" stdDeviation="2" result="blurredNoise"/>' +
+                '<feDisplacementMap in="SourceGraphic" in2="blurredNoise" scale="70" xChannelSelector="R" yChannelSelector="B" result="displaced"/>' +
+                '<feGaussianBlur in="displaced" stdDeviation="4" result="finalBlur"/>' +
+                '<feComposite in="finalBlur" in2="finalBlur" operator="over"/>' +
+                '</filter></defs></svg>';
+            document.body.appendChild(holder);
+        }
+
+        const doc = document;
+        const root = doc.documentElement;
+
+        // Dot and crest colours as "r,g,b", plus how strongly the field shows
+        // through. Kept soft so chat text stays easy to read on top of it.
+        const THEMES = {
+            dark:  { dot: '212,212,216', accent: '255,255,255', strength: 0.55 },
+            light: { dot: '39,39,42',    accent: '0,0,0',       strength: 0.38 },
+        };
+        const currentTheme = () => {
+            const chosen = root.getAttribute('data-lil-theme');
+            if (THEMES[chosen]) return THEMES[chosen];
+            return matchMedia('(prefers-color-scheme: light)').matches ? THEMES.light : THEMES.dark;
+        };
+
+        const CAM = 0.62;               // camera height above the ground
+        const NEAR = 0.35, FAR = 3.4;   // nearest and farthest rows of dots
+        const CRESTS = true;            // tint the highest crests with the accent colour
+
+        const canvas = doc.createElement('canvas');
+        canvas.id = 'lil-buddy-waves';
+        canvas.setAttribute('aria-hidden', 'true');
+        canvas.style.cssText =
+            'position:fixed;inset:0;width:100vw;height:100vh;display:block;' +
+            'pointer-events:none;z-index:-1';
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Sit just above the app's own background and below everything else
+        // (.stApp is made its own stacking context in the stylesheet).
+        const mount = () => {
+            if (canvas.isConnected) return true;
+            const app = doc.querySelector('.stApp') || doc.querySelector('[data-testid="stApp"]');
+            if (!app) return false;
+            app.prepend(canvas);
+            return true;
+        };
+
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const coarse = !matchMedia('(hover: hover) and (pointer: fine)').matches;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        let W = 0, H = 0, cols = 0, rows = 0, f = 0, hz = 0;
+        let raf = 0, last = 0;
+        const t0 = performance.now();
+        const ptr = { x: 0, z: 1.4, s: 0, tx: 0, tz: 1.4, ts: 0 };
+        const rings = [];
+
+        const resize = () => {
+            const w = window.innerWidth, h = window.innerHeight;
+            if (w === W && h === H) return;
+            W = w; H = h;
+            canvas.width = Math.round(W * dpr);
+            canvas.height = Math.round(H * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            f = Math.max(W, H * 1.2) * 0.55;    // focal length
+            hz = H * 0.3;                        // horizon line
+            cols = Math.round(Math.min(150, Math.max(56, W / 9)));
+            rows = Math.round(Math.min(90, Math.max(48, H / 9.5)));
+        };
+
+        // Half-width of the ground at the far edge, so the field always fills the screen.
+        const half = () => (W / 2 / f) * FAR * 1.05;
+
+        const height = (x, z, t) => {
+            let y =
+                0.085 * Math.sin(x * 2.2 + t * 0.7) +
+                0.07 * Math.sin(z * 2.9 - t * 0.9 + x * 0.8) +
+                0.03 * Math.sin((x + z) * 6.1 + t * 1.6);
+            if (ptr.s > 0.01) {
+                const d2 = (x - ptr.x) ** 2 + (z - ptr.z) ** 2;
+                y += 0.24 * ptr.s * Math.exp(-d2 / 0.07);
+            }
+            for (const r of rings) {
+                const age = t - r.t, d = Math.hypot(x - r.x, z - r.z), front = age * 1.15;
+                y += 0.2 * Math.exp(-((d - front) ** 2) / 0.014) * Math.exp(-age * 0.75);
+            }
+            return y;
+        };
+
+        const frame = (t) => {
+            const theme = currentTheme();
+            ctx.clearRect(0, 0, W, H);
+            ptr.x += (ptr.tx - ptr.x) * 0.1;
+            ptr.z += (ptr.tz - ptr.z) * 0.1;
+            ptr.s += (ptr.ts - ptr.s) * 0.06;
+            while (rings.length && t - rings[0].t > 5) rings.shift();
+            const hw = half();
+            const hot = [];
+            for (let j = 0; j < rows; j++) {
+                // Rows are spaced geometrically in depth so they sit roughly evenly on screen.
+                const z = FAR * Math.pow(NEAR / FAR, j / (rows - 1));
+                const fog = Math.pow(1 - (z - NEAR) / (FAR - NEAR), 1.25);
+                const size = Math.max(0.8, Math.min(3.2, 2.3 / z));
+                ctx.fillStyle = `rgba(${theme.dot},${((0.12 + fog * 0.85) * theme.strength).toFixed(3)})`;
+                for (let i = 0; i < cols; i++) {
+                    const x = -hw + (i / (cols - 1)) * hw * 2;
+                    const y = height(x, z, t);
+                    const sx = W / 2 + (x / z) * f;
+                    if (sx < -4 || sx > W + 4) continue;
+                    const sy = hz + ((CAM - y) / z) * f;
+                    if (CRESTS && y > 0.12) { hot.push(sx, sy, size, fog); continue; }
+                    ctx.fillRect(sx - size / 2, sy - size / 2, size, size);
+                }
+            }
+            for (let k = 0; k < hot.length; k += 4) {
+                ctx.fillStyle = `rgba(${theme.accent},${((0.2 + hot[k + 3] * 0.8) * theme.strength).toFixed(3)})`;
+                const s = hot[k + 2] * 1.15;
+                ctx.fillRect(hot[k] - s / 2, hot[k + 1] - s / 2, s, s);
+            }
+        };
+
+        const now = () => (performance.now() - t0) / 1000;
+        const draw = () => { if (mount()) { resize(); frame(reduced ? 3 : now()); } };
+        const loop = (ms) => {
+            if (doc.hidden) { raf = 0; return; }
+            raf = requestAnimationFrame(loop);
+            if (coarse && ms - last < 30) return;   // ~30 fps on phones and tablets
+            last = ms;
+            draw();
+        };
+        const wake = () => { if (!reduced && !raf && !doc.hidden) raf = requestAnimationFrame(loop); };
+
+        // Where on the ground a screen point lands (ignoring the waves).
+        const ground = (e) => {
+            const sx = e.clientX, sy = e.clientY;
+            if (sx < 0 || sy < 0 || sx > W || sy > H || sy <= hz + 4) return null;
+            const z = Math.min(FAR, Math.max(NEAR, (CAM * f) / (sy - hz)));
+            return { x: ((sx - W / 2) * z) / f, z };
+        };
+        const onMove = (e) => {
+            const g = ground(e);
+            if (g) {
+                ptr.tx = g.x; ptr.tz = g.z;
+                if (ptr.s < 0.05) { ptr.x = g.x; ptr.z = g.z; }
+            }
+            ptr.ts = g ? 1 : 0;
+        };
+        const onDown = (e) => {
+            const g = ground(e);
+            if (g) rings.push({ x: g.x, z: g.z, t: now() });
+        };
+
+        draw();
+        doc.addEventListener('visibilitychange', wake);
+        if (reduced) {
+            // No animation: just keep the still picture the right size and colour.
+            window.addEventListener('resize', draw);
+            new MutationObserver(draw).observe(root, { attributes: true, attributeFilter: ['data-lil-theme'] });
+            setInterval(() => { if (!canvas.isConnected) draw(); }, 1000);
+        } else {
+            wake();
+            if (!coarse) window.addEventListener('pointermove', onMove, { passive: true });
+            window.addEventListener('pointerdown', onDown, { passive: true });
+        }
+    }
+
+    const page = window.parent;
+    if (!page.__lilBuddyWaves) {
+        const script = page.document.createElement('script');
+        script.textContent = '(' + lilBuddyWaves.toString() + ')();';
+        page.document.head.appendChild(script);
+    }
+    </script>
+    """,
+    height=0,
+)
 
 # ============================================================
 # AI CONNECTION (Google Gemini free tier)
@@ -663,6 +1096,11 @@ SYSTEM_PROMPT = """You are dharshan's lil buddy: a capable, friendly, practical 
 Help with everyday questions, learning, writing, brainstorming, planning, coding, and explaining images.
 Use the conversation history to maintain context. Be honest when you are uncertain, never claim to see an
 image that was not included, and give clear, useful answers. Format with Markdown only when it improves readability.
+
+How you write:
+- When you're just chatting with the user (greetings, small talk, jokes, hanging out), you can talk like a Gen Z friend. Slang, lowercase, and abbreviations are fine.
+- When the user asks for a specific answer or for something they will use, you must switch to proper writing. This includes explanations, homework help, facts, definitions, step-by-step instructions, and any piece of writing such as an essay, paragraph, email, message, caption, or speech. Use correct high-school-level grammar, spelling, capitalization, and punctuation, write in full sentences, and do not use slang, texting abbreviations, or emojis, even if the conversation before it was casual.
+
 Here are some things you should know:
 
 You are known as “dharshan’s lil buddy”, an ai app
@@ -831,18 +1269,18 @@ ANALYTICS_DAYS = 30
 CHART_WEEKS = 13
 CHART_COLORS = {
     "dark": {
-        "line": "#a78bfa",
-        "muted": "#a9b5c9",
+        "line": "#e4e4e7",
+        "muted": "#a1a1aa",
         "label": "#ffffff",
-        "grid": "rgba(148, 163, 184, .14)",
-        "axis": "rgba(148, 163, 184, .25)",
+        "grid": "rgba(255, 255, 255, .10)",
+        "axis": "rgba(255, 255, 255, .20)",
     },
     "light": {
-        "line": "#7c3aed",
-        "muted": "#596179",
-        "label": "#0f1222",
-        "grid": "rgba(15, 23, 42, .12)",
-        "axis": "rgba(15, 23, 42, .22)",
+        "line": "#18181b",
+        "muted": "#52525b",
+        "label": "#09090b",
+        "grid": "rgba(0, 0, 0, .10)",
+        "axis": "rgba(0, 0, 0, .20)",
     },
 }
 
@@ -1126,15 +1564,32 @@ ADMIN_CSS = """
 .st-key-admin_visitor input,
 .st-key-admin_visitor [data-baseweb="select"] div { color: var(--ink) !important; }
 .st-key-admin_visitor svg, [data-testid="stTextInputRootElement"] button { color: var(--muted) !important; }
-.st-key-admin_refresh button, .st-key-admin_lock button, .st-key-admin_export button {
-    background: var(--field) !important;
-    border: 1px solid var(--field-border) !important;
-    color: var(--ink) !important;
-    font-weight: 600;
+/* Admin tools look like brushed-metal hardware buttons: a bevelled grey rim
+   around a grey face, pressing down slightly when clicked. */
+.st-key-admin_refresh button, .st-key-admin_lock button, .st-key-admin_export button,
+.st-key-admin_prepare_csv button, [data-testid="stPopoverBody"] .stDownloadButton button {
+    border: 1.5px solid transparent !important;
+    border-radius: var(--btn-radius) !important;
+    background:
+        linear-gradient(#9a9a9a, #6e6e6e) padding-box,
+        linear-gradient(#fafafa, #3e3e3e, #e5e5e5) border-box !important;
+    color: #ffffff !important;
+    text-shadow: 0 -1px 0 rgb(60 60 60);
+    font-weight: 700;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, .08);
+    transition: all 250ms cubic-bezier(.1, .4, .2, 1);
 }
-.st-key-admin_refresh button:hover, .st-key-admin_lock button:hover, .st-key-admin_export button:hover {
-    border-color: var(--purple) !important;
+.st-key-admin_export button :is(p, span, div) { color: inherit !important; }
+.st-key-admin_refresh button:hover, .st-key-admin_lock button:hover, .st-key-admin_export button:hover,
+.st-key-admin_prepare_csv button:hover, [data-testid="stPopoverBody"] .stDownloadButton button:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
     transform: none;
+}
+.st-key-admin_refresh button:active, .st-key-admin_lock button:active, .st-key-admin_export button:active,
+.st-key-admin_prepare_csv button:active, [data-testid="stPopoverBody"] .stDownloadButton button:active {
+    transform: translateY(2.5px) scale(.99);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
 }
 [data-testid="stPopoverBody"] { background: var(--popover) !important; }
 .main .block-container,
@@ -1153,7 +1608,7 @@ ADMIN_CSS = """
     padding: .65rem .9rem;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: var(--btn-radius);
     color: var(--ink);
     font-weight: 600;
 }
@@ -1183,8 +1638,8 @@ ADMIN_CSS = """
     margin-right: .55rem;
     padding: .1rem .45rem;
     border-radius: 999px;
-    background: #7c3aed;
-    color: #fff;
+    background: var(--btn);
+    color: var(--btn-ink);
     font-family: 'DM Mono', monospace;
     font-size: .8rem;
     text-align: center;
@@ -1647,7 +2102,7 @@ with st.sidebar:
         st.rerun()
     st.divider()
 
-    if st.button("new chat", icon="➕", type="primary"):
+    if st.button("new chat", icon=":material/add:", type="primary", key="new_chat"):
         st.session_state.page = "chat"
         st.session_state.active_conversation_id = None
         st.session_state.loaded_conversation_id = None
@@ -1671,7 +2126,7 @@ with st.sidebar:
 
     st.divider()
     if st.session_state.active_conversation_id and st.button(
-        "Delete this chat", icon="🗑️", type="secondary"
+        "Delete this chat", icon=":material/delete:", type="secondary", key="delete_chat"
     ):
         delete_conversation(
             supabase, st.session_state.active_conversation_id, visitor_id
