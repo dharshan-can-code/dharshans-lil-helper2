@@ -882,13 +882,38 @@ components.html(
 )
 
 # ============================================================
-# AI CONNECTION (Google Gemini free tier)
+# AI CONNECTION (Google Gemini free tier, with free backups)
 # ============================================================
 
 @st.cache_resource
-def get_client(api_key: str) -> Client:
-    """Create one reusable client for the Gemini API."""
-    return Client(api_key=api_key, timeout=90)
+def get_client(
+    api_key: str,
+    cloudflare_account_id: str | None = None,
+    cloudflare_api_token: str | None = None,
+    groq_api_key: str | None = None,
+) -> Client:
+    """Create one reusable AI client: Gemini first, then free backups on Cloudflare and Groq
+    (each backup is only used when its keys are in Streamlit secrets)."""
+    return Client(
+        api_key=api_key,
+        timeout=90,
+        cloudflare_account_id=cloudflare_account_id,
+        cloudflare_api_token=cloudflare_api_token,
+        groq_api_key=groq_api_key,
+    )
+
+
+def get_backup_keys() -> tuple[str | None, str | None, str | None]:
+    """Optional backup AI keys: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, GROQ_API_KEY."""
+    try:
+        secrets = st.secrets
+        return (
+            secrets.get("CLOUDFLARE_ACCOUNT_ID"),
+            secrets.get("CLOUDFLARE_API_TOKEN"),
+            secrets.get("GROQ_API_KEY"),
+        )
+    except FileNotFoundError:
+        return None, None, None
 
 
 def get_api_key() -> str | None:
@@ -1099,7 +1124,14 @@ image that was not included, and give clear, useful answers. Format with Markdow
 
 How you write:
 - When you're just chatting with the user (greetings, small talk, jokes, hanging out), you can talk like a Gen Z friend. Slang, lowercase, and abbreviations are fine.
-- When the user asks for a specific answer or for something they will use, you must switch to proper writing. This includes explanations, homework help, facts, definitions, step-by-step instructions, and any piece of writing such as an essay, paragraph, email, message, caption, or speech. Use correct high-school-level grammar, spelling, capitalization, and punctuation, write in full sentences, and do not use slang, texting abbreviations, or emojis, even if the conversation before it was casual.
+- When the user asks for a specific answer or for something they will use, you must switch to proper writing. This includes explanations, homework help, facts, definitions, step-by-step instructions, and any piece of writing such as an essay, paragraph, email, message, caption, or speech. Use correct high-school-level grammar, spelling, capitalization, and punctuation, and do not use slang, texting abbreviations, or emojis, even if the conversation before it was casual. Headings, bullet points, and numbered steps are still fine when they make the answer easier to follow.
+- A question still counts as a real question even when it is typed casually. For example, "yo whats the difference between a virus and bacteria lol" deserves a full, proper answer, not a quick casual reply.
+
+How helpful to be:
+- Give complete, genuinely useful answers. For explanations and homework help, cover the key ideas, explain why things work the way they do, and include an example or two. For how-to questions, give clear steps with practical tips.
+- Organize longer answers with short headings, bullet points, or numbered steps so they are easy to scan, and bold the most important terms.
+- Match the length to the question. A quick fact gets a short answer, while explanations, plans, and writing tasks get a full, detailed one. Do not pad answers with filler.
+- When it helps, end with a short offer to go further, such as a practice question, a quick summary, or the next step.
 
 Here are some things you should know:
 
@@ -2062,7 +2094,7 @@ if not api_key:
     st.code('GEMINI_API_KEY = "your_gemini_api_key"', language="toml")
     st.stop()
 
-client = get_client(api_key)
+client = get_client(api_key, *get_backup_keys())
 
 st.markdown(
     f"""
