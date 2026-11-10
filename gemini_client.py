@@ -91,6 +91,15 @@ CHAIN = (
     ("gemini", "gemini-3.5-flash-lite"),
     ("groq", GROQ_MODEL),
 )
+# After a model fails, skip it for a while so later messages don't wait on it again. These
+# timers are shared by everyone using the app (the client is created once per server).
+REST_SECONDS_OUT_OF_QUOTA = 300   # 429: free limit used up, check again in 5 minutes
+REST_SECONDS_OTHER = 30           # busy, timed out, or another error
+
+# Gemini thinks before it answers; "low" keeps that short so replies start sooner.
+# ("minimal" would be faster, but Gemini 3.8 Flash rejects it.)
+GEMINI_THINKING_LEVEL = "low"
+
 # How long to wait for a model before trying the next one. A full detailed reply rarely takes
 # more than about 40 seconds, and a stuck model shouldn't hold the user for minutes.
 BACKUP_TIMEOUT_SECONDS = 60
@@ -120,6 +129,7 @@ class Client:
         self._cloudflare = (cloudflare_account_id, cloudflare_api_token) if (
             cloudflare_account_id and cloudflare_api_token) else None
         self._groq_key = groq_api_key or None
+        self._resting = {}  # (provider, model) -> time.time() until which it is skipped
 
     # ---------- which models to try ----------
 
@@ -135,7 +145,19 @@ class Client:
             if provider == "groq" and (not self._groq_key or newest_has_images):
                 continue  # Groq's free model can't see images
             steps.append((provider, name))
-        return steps
+        # Skip models that failed a moment ago, unless every model is resting (then try them all).
+        now = time.time()
+        awake = [step for step in steps if self._resting.get(step, 0) <= now]
+        return awake or steps
+
+    def _rest(self, provider, name, reason):
+        seconds = REST_SECONDS_OUT_OF_QUOTA if reason.status_code == 429 else REST_SECONDS_OTHER
+        self._resting[(provider, name)] = time.time() + seconds
+        print(f"AI {provider}/{name} unavailable ({reason.status_code or reason}); "
+              f"skipping it for {seconds}s and trying the next model")
+
+    def _awake(self, provider, name):
+        self._resting.pop((provider, name), None)
 
     def chat(self, model, messages, format=None, options=None, stream=False, think=None, **_ignored):
         # `think` was an Ollama setting; these models decide how much to think on their own.
@@ -148,11 +170,11 @@ class Client:
         for provider, name in steps:
             try:
                 text = self._ask(provider, name, messages, format, temperature)
+                self._awake(provider, name)
                 return _wrap(text)
             except _TryNext as reason:
-                print(f"AI {provider}/{name} unavailable ({reason.status_code or reason}), trying the next model")
+                self._rest(provider, name, reason)
                 last = reason
-                time.sleep(0.3)
         raise _final_error(last)
 
     def _stream(self, steps, messages, format, temperature):
@@ -162,16 +184,17 @@ class Client:
             try:
                 for text in self._ask_stream(provider, name, messages, format, temperature):
                     if text:
-                        started = True
+                        if not started:
+                            started = True
+                            self._awake(provider, name)
                         yield _wrap(text)
                 return
             except _TryNext as reason:
                 # Once part of a reply has been shown, switching models would mix two answers.
                 if started:
                     raise _final_error(reason) from reason
-                print(f"AI {provider}/{name} unavailable ({reason.status_code or reason}), trying the next model")
+                self._rest(provider, name, reason)
                 last = reason
-                time.sleep(0.3)
         raise _final_error(last)
 
     # ---------- one attempt ----------
@@ -180,10 +203,14 @@ class Client:
         if provider == "gemini":
             system, contents = _gemini_messages(messages)
             try:
-                response = self._gemini.models.generate_content(
-                    model=name, contents=contents, config=_gemini_config(system, format, temperature)
-                )
-                return response.text
+                try:
+                    config = _gemini_config(system, format, temperature, think_low=True)
+                    return self._gemini.models.generate_content(model=name, contents=contents, config=config).text
+                except errors.APIError as error:
+                    if not _rejected_thinking(error):
+                        raise
+                    config = _gemini_config(system, format, temperature, think_low=False)
+                    return self._gemini.models.generate_content(model=name, contents=contents, config=config).text
             except errors.APIError as error:
                 raise _gemini_error(error) from error
             except Exception as error:  # timeouts, dropped connections, odd replies
@@ -194,10 +221,21 @@ class Client:
         if provider == "gemini":
             system, contents = _gemini_messages(messages)
             try:
-                for chunk in self._gemini.models.generate_content_stream(
-                    model=name, contents=contents, config=_gemini_config(system, format, temperature)
-                ):
-                    yield chunk.text
+                think_low = True
+                while True:
+                    started = False
+                    try:
+                        config = _gemini_config(system, format, temperature, think_low=think_low)
+                        for chunk in self._gemini.models.generate_content_stream(
+                            model=name, contents=contents, config=config
+                        ):
+                            started = True
+                            yield chunk.text
+                        break
+                    except errors.APIError as error:
+                        if started or not think_low or not _rejected_thinking(error):
+                            raise
+                        think_low = False  # this model won't take the thinking setting; ask again without it
             except errors.APIError as error:
                 raise _gemini_error(error) from error
             except Exception as error:  # timeouts, dropped connections, odd replies
@@ -266,12 +304,18 @@ def _check(provider, response):
 # Message conversion
 # ------------------------------------------------------------------------------------------
 
-def _gemini_config(system, format, temperature):
+def _gemini_config(system, format, temperature, think_low=True):
     return types.GenerateContentConfig(
         system_instruction=system,
         temperature=temperature,
         response_mime_type="application/json" if format == "json" else None,
+        thinking_config=types.ThinkingConfig(thinking_level=GEMINI_THINKING_LEVEL) if think_low else None,
     )
+
+
+def _rejected_thinking(error):
+    """True when a model said no to the thinking setting (then we ask again without it)."""
+    return getattr(error, "code", None) == 400 and "think" in str(error).lower()
 
 
 def _gemini_messages(messages):

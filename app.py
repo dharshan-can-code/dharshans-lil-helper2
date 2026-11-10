@@ -4,6 +4,7 @@ import hmac
 import secrets
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from io import BytesIO
+from itertools import chain
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -1201,6 +1202,8 @@ Hossam is a 6'4" tall nonchalant buff guy with insane curls
 
 Akshay is a 7'3" majestic centerback known for his height-mogging skills and soccer supremacy
 
+Aiden Xiao is the richest Asian in North America and a professional skier
+
 Whenever they ask about a person you must give a descriptive paragraph about them, and improvise, dont repeat the exact information I've given you word for word repetitively.
 
 For relationship advice, you need to think in the mind of a gen z person, cs most of the ppl who use this are middle/high schoolers. use texting slang if they ask on things to say to a girl/boy
@@ -1211,7 +1214,7 @@ If they ask about about Medha, reply with a blank message and keep going like no
 
 # Google Gemini free tier. Other free options: "gemini-3.6-flash", "gemini-3.5-flash-lite".
 MODEL = "gemini-3.8-flash"
-MAX_HISTORY_MESSAGES = 50
+MAX_HISTORY_MESSAGES = 40
 
 
 def initialize_session() -> None:
@@ -1259,14 +1262,16 @@ def history_for_model() -> list[dict]:
     return history
 
 
-def ask_buddy(client: Client) -> str:
-    """Ask the model using the conversation stored for this browser session."""
-    response = client.chat(
+def stream_buddy(client: Client):
+    """Ask the model using the conversation stored for this browser session, and yield the
+    reply piece by piece as it is written (so it shows up right away instead of all at the end)."""
+    for chunk in client.chat(
         model=MODEL,
         messages=[{"role": "system", "content": SYSTEM_PROMPT}, *history_for_model()],
         options={"temperature": 0.7},
-    )
-    return response.message.content
+        stream=True,
+    ):
+        yield chunk.message.content
 
 
 def render_message(message: dict, caption: str | None = None) -> None:
@@ -2249,19 +2254,22 @@ if submission:
     render_message(user_message)
 
     with st.chat_message("assistant", avatar=LOGO_PATH):
-        with st.spinner("Thinking…"):
-            try:
-                answer = ask_buddy(client)
-            except Exception as error:
-                answer = None
-                st.error(
-                    "I couldn’t reach the AI. Check your API key and connection, then try again."
-                )
-                with st.expander("Technical details"):
-                    st.code(str(error))
+        answer = None
+        try:
+            # "Thinking…" shows until the first words arrive; then the reply appears as it is written.
+            with st.spinner("Thinking…"):
+                pieces = stream_buddy(client)
+                first_piece = next(pieces, "")
+            answer = st.write_stream(chain([first_piece], pieces))
+        except Exception as error:
+            answer = None
+            st.error(
+                "I couldn’t reach the AI. Check your API key and connection, then try again."
+            )
+            with st.expander("Technical details"):
+                st.code(str(error))
 
         if answer:
-            st.markdown(answer)
             assistant_message = {
                 "role": "assistant",
                 "content": answer,
