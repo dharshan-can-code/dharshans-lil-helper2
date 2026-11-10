@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import hmac
+import html
 import secrets
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from io import BytesIO
@@ -264,6 +265,7 @@ st.markdown(
     }
 
     [data-testid="stChatMessage"][data-testid*="user"] { background: var(--surface-raised); }
+    [data-testid="stElementContainer"]:has(.lil-timing) { display: none; }
     /* Monotone: grey out things that bring their own colour - alert boxes and
        code highlighting. The logo, emoji avatars and photos people attach keep
        their colour. */
@@ -2268,6 +2270,14 @@ if submission:
             )
             with st.expander("Technical details"):
                 st.code(str(error))
+
+        # Which model answered and how long it took. Printed to the app's logs, and left on the
+        # page as an invisible marker (CSS hides it) so the timing can be checked in a browser.
+        timing = client.last_report()
+        st.markdown(
+            f'<span class="lil-timing" data-timing="{html.escape(timing, quote=True)}"></span>',
+            unsafe_allow_html=True,
+        )
 
         if answer:
             assistant_message = {

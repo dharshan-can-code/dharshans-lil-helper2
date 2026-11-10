@@ -27,12 +27,50 @@ Messages use Ollama's format: {"role": "system" | "user" | "assistant", "content
 
 import base64
 import json
+import threading
 import time
 from types import SimpleNamespace
 
 import httpx
 from google import genai
 from google.genai import errors, types
+
+
+# ------------------------------------------------------------------------------------------
+# Timing report: which model answered each message and how long it took. The app logs it and
+# can read it with client.last_report(). Kept per thread (each visitor's request runs on its
+# own thread), so two people chatting at once never see each other's report.
+# ------------------------------------------------------------------------------------------
+
+_local = threading.local()
+
+
+def _new_report():
+    _local.report = {"started": time.time(), "tries": [], "answered_by": None,
+                     "first_words_s": None, "total_s": None, "notes": []}
+    return _local.report
+
+
+def _note(text):
+    report = getattr(_local, "report", None)
+    if report is not None:
+        report["notes"].append(text)
+
+
+def _report_text(report):
+    if not report:
+        return "no report"
+    parts = [f"answered by {report['answered_by'] or 'nobody (all models failed)'}"]
+    if report["first_words_s"] is not None:
+        parts.append(f"first words {report['first_words_s']:.1f}s")
+    if report["total_s"] is not None:
+        parts.append(f"total {report['total_s']:.1f}s")
+    failed = [f"{t['model']} {t['outcome']} ({t['seconds']:.1f}s)" for t in report["tries"] if t["outcome"] != "ok"]
+    if failed:
+        parts.append("skipped/failed first: " + ", ".join(failed))
+    if report["notes"]:
+        parts.append("notes: " + "; ".join(report["notes"]))
+    return " · ".join(parts)
 
 
 class ResponseError(Exception):
@@ -166,35 +204,64 @@ class Client:
         if stream:
             return self._stream(steps, messages, format, temperature)
 
+        report = _new_report()
         last = None
         for provider, name in steps:
+            tried = time.time()
             try:
                 text = self._ask(provider, name, messages, format, temperature)
                 self._awake(provider, name)
+                self._finish(report, provider, name, tried, ok=True)
                 return _wrap(text)
             except _TryNext as reason:
+                self._finish(report, provider, name, tried, ok=False, reason=reason)
                 self._rest(provider, name, reason)
                 last = reason
+        self._finish(report, None, None, None, ok=False)
         raise _final_error(last)
 
+    def last_report(self):
+        """A one-line summary of the most recent reply on this thread (for logs and debugging)."""
+        return _report_text(getattr(_local, "report", None))
+
+    def _finish(self, report, provider, name, tried, ok, reason=None):
+        now = time.time()
+        if provider:
+            outcome = "ok" if ok else str(getattr(reason, "status_code", None) or "error")
+            report["tries"].append({"model": f"{provider}/{name}", "outcome": outcome,
+                                    "seconds": now - tried})
+            if ok:
+                report["answered_by"] = f"{provider}/{name}"
+        if ok or provider is None:
+            report["total_s"] = now - report["started"]
+            print("AI timing:", _report_text(report))
+
     def _stream(self, steps, messages, format, temperature):
+        report = _new_report()
         last = None
         for provider, name in steps:
             started = False
+            tried = time.time()
             try:
                 for text in self._ask_stream(provider, name, messages, format, temperature):
                     if text:
                         if not started:
                             started = True
                             self._awake(provider, name)
+                            report["first_words_s"] = time.time() - report["started"]
                         yield _wrap(text)
+                self._finish(report, provider, name, tried, ok=True)
                 return
             except _TryNext as reason:
                 # Once part of a reply has been shown, switching models would mix two answers.
                 if started:
+                    self._finish(report, provider, name, tried, ok=False, reason=reason)
+                    self._finish(report, None, None, None, ok=False)
                     raise _final_error(reason) from reason
+                self._finish(report, provider, name, tried, ok=False, reason=reason)
                 self._rest(provider, name, reason)
                 last = reason
+        self._finish(report, None, None, None, ok=False)
         raise _final_error(last)
 
     # ---------- one attempt ----------
@@ -209,6 +276,7 @@ class Client:
                 except errors.APIError as error:
                     if not _rejected_thinking(error):
                         raise
+                    _note(f"{name} rejected thinking setting, asked again without it")
                     config = _gemini_config(system, format, temperature, think_low=False)
                     return self._gemini.models.generate_content(model=name, contents=contents, config=config).text
             except errors.APIError as error:
@@ -236,6 +304,7 @@ class Client:
                         if started or not think_low or not _rejected_thinking(error):
                             raise
                         think_low = False  # this model won't take the thinking setting; ask again without it
+                        _note(f"{name} rejected thinking setting, asked again without it")
             except errors.APIError as error:
                 raise _gemini_error(error) from error
             except Exception as error:  # timeouts, dropped connections, odd replies
@@ -274,6 +343,8 @@ class Client:
                     if response.status_code >= 400:
                         response.read()
                     _check(provider, response)
+                    reasoning_chars = 0
+                    reasoning_started = None
                     for line in response.iter_lines():
                         if not line.startswith("data:"):
                             continue
@@ -281,7 +352,18 @@ class Client:
                         if payload == "[DONE]":
                             break
                         choices = json.loads(payload).get("choices") or [{}]
-                        yield (choices[0].get("delta") or {}).get("content") or ""
+                        delta = choices[0].get("delta") or {}
+                        # Some models "think" silently first; that text isn't shown, but count it.
+                        thought = delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        if thought:
+                            reasoning_started = reasoning_started or time.time()
+                            reasoning_chars += len(thought)
+                        content = delta.get("content") or ""
+                        if content and reasoning_chars and reasoning_started:
+                            _note(f"{provider} thought silently for {time.time() - reasoning_started:.1f}s "
+                                  f"({reasoning_chars} chars) before writing")
+                            reasoning_started = None
+                        yield content
         except (httpx.TimeoutException, httpx.TransportError) as error:
             raise _TryNext(f"{provider} timed out or couldn't connect: {type(error).__name__}") from error
         except (KeyError, IndexError, ValueError) as error:
