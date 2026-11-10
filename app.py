@@ -6,6 +6,7 @@ import secrets
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from io import BytesIO
 from itertools import chain
+from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -13,6 +14,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
+import gemini_client
 from gemini_client import Client
 from PIL import Image, ImageOps
 from streamlit_cookies_controller import CookieController
@@ -888,12 +890,18 @@ components.html(
 # AI CONNECTION (Google Gemini free tier, with free backups)
 # ============================================================
 
+# Fingerprint of gemini_client.py. Passed to get_client so that after an update is pushed,
+# Streamlit builds a fresh client instead of reusing the one cached from the old code.
+CLIENT_CODE_VERSION = hashlib.sha256(Path(gemini_client.__file__).read_bytes()).hexdigest()[:12]
+
+
 @st.cache_resource
 def get_client(
     api_key: str,
     cloudflare_account_id: str | None = None,
     cloudflare_api_token: str | None = None,
     groq_api_key: str | None = None,
+    code_version: str = "",
 ) -> Client:
     """Create one reusable AI client: Gemini first, then free backups on Cloudflare and Groq
     (each backup is only used when its keys are in Streamlit secrets)."""
@@ -2101,7 +2109,7 @@ if not api_key:
     st.code('GEMINI_API_KEY = "your_gemini_api_key"', language="toml")
     st.stop()
 
-client = get_client(api_key, *get_backup_keys())
+client = get_client(api_key, *get_backup_keys(), code_version=CLIENT_CODE_VERSION)
 
 st.markdown(
     f"""
@@ -2273,7 +2281,10 @@ if submission:
 
         # Which model answered and how long it took. Printed to the app's logs, and left on the
         # page as an invisible marker (CSS hides it) so the timing can be checked in a browser.
-        timing = client.last_report()
+        try:
+            timing = client.last_report()
+        except Exception:  # timing is only for debugging; it must never break a reply
+            timing = "timing unavailable"
         st.markdown(
             f'<span class="lil-timing" data-timing="{html.escape(timing, quote=True)}"></span>',
             unsafe_allow_html=True,
