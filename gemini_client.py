@@ -134,6 +134,11 @@ CHAIN = (
 REST_SECONDS_OUT_OF_QUOTA = 300   # 429: free limit used up, check again in 5 minutes
 REST_SECONDS_OTHER = 30           # busy, timed out, or another error
 
+# Cloudflare's Gemma 4 "thinks" silently before writing (measured: 3-6 s for "hi" or "2+2",
+# 9 s before a long answer). For text messages that's turned off so replies start right away;
+# messages with a new photo (mostly homework) keep thinking, where accuracy matters more.
+CLOUDFLARE_THINK_ON_TEXT = False
+
 # Gemini thinks before it answers; "low" keeps that short so replies start sooner.
 # ("minimal" would be faster, but Gemini 3.8 Flash rejects it.)
 GEMINI_THINKING_LEVEL = "low"
@@ -314,6 +319,27 @@ class Client:
 
     def _openai_style(self, provider, name, messages, format, temperature, stream):
         """Cloudflare and Groq both speak the OpenAI chat format."""
+        extra = {}
+        newest_has_images = bool(messages and messages[-1].get("images"))
+        if provider == "cloudflare" and CLOUDFLARE_THINK_ON_TEXT is False and not newest_has_images:
+            # Gemma otherwise "thinks" silently for 3-10 s before writing anything.
+            extra["chat_template_kwargs"] = {"enable_thinking": False}
+        if not extra:
+            yield from self._openai_once(provider, name, messages, format, temperature, stream, extra)
+            return
+        started = False
+        try:
+            for piece in self._openai_once(provider, name, messages, format, temperature, stream, extra):
+                started = True
+                yield piece
+        except _TryNext as reason:
+            if started or reason.status_code not in (400, 422):
+                raise
+            # This model didn't accept the setting; ask again without it rather than skip the model.
+            _note(f"{provider} rejected the thinking-off setting, asked again without it")
+            yield from self._openai_once(provider, name, messages, format, temperature, stream, {})
+
+    def _openai_once(self, provider, name, messages, format, temperature, stream, extra):
         if provider == "cloudflare":
             account_id, token = self._cloudflare
             url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1/chat/completions"
@@ -329,6 +355,7 @@ class Client:
             body["response_format"] = {"type": "json_object"}
         if provider == "groq":
             body["reasoning_effort"] = "low"
+        body.update(extra)
         headers = {"Authorization": f"Bearer {token}"}
 
         try:
